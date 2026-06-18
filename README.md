@@ -19,6 +19,12 @@ dotnet test AiReliabilityEngineering.slnx
 ## Run the Fake Workflow
 
 ```bash
+./scripts/aire run samples/idea.md
+```
+
+The Bash script wraps the underlying .NET command:
+
+```bash
 dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
 ```
 
