@@ -2,6 +2,7 @@ using AiReliabilityEngineering.Infrastructure.Logging;
 using AiReliabilityEngineering.Infrastructure.Serialization;
 using AiReliabilityEngineering.Orchestration;
 using AiReliabilityEngineering.Orchestration.RunManagement;
+using System.Text.Json;
 
 namespace AiReliabilityEngineering.Orchestration.Tests;
 
@@ -37,6 +38,28 @@ public sealed class AireOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_WithValidIdeaFile_WritesCompletedStateWithSixSuccessfulSteps()
+    {
+        using var test = TestWorkspace.Create();
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var statePath = Path.Combine(result.RunDirectory!, "run-state.json");
+        await using var stream = File.OpenRead(statePath);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        var root = document.RootElement;
+
+        Assert.Equal("Completed", root.GetProperty("status").GetString());
+        var steps = root.GetProperty("steps");
+        Assert.Equal(6, steps.GetArrayLength());
+
+        string[] expectedSteps = ["Requirements", "Documentation", "Planning", "Code", "Testing", "Review"];
+        for (var index = 0; index < expectedSteps.Length; index++)
+        {
+            Assert.Equal(expectedSteps[index], steps[index].GetProperty("step").GetString());
+            Assert.Equal("Succeeded", steps[index].GetProperty("status").GetString());
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_WithValidIdeaFile_ExecutesAllFakeAgentsAndCreatesArtifacts()
     {
         using var test = TestWorkspace.Create();
@@ -45,11 +68,14 @@ public sealed class AireOrchestratorTests
 
         string[] expectedFiles =
         [
+            "input/idea.md",
+            "run-state.json",
             "artifacts/specification.json",
             "artifacts/README.md",
             "artifacts/PLAN.md",
             "artifacts/tasks.json",
             "artifacts/review.md",
+            "logs/orchestrator.log",
             "reports/tests.md",
             "workspace/README.md",
             "workspace/src/placeholder.txt"
