@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\AiReliabilityEngineering.Core\AiReliabilityEngineering.Core.csproj" />
     <ProjectReference Include="..\AiReliabilityEngineering.Infrastructure\AiReliabilityEngineering.Infrastructure.csproj" />
     <ProjectReference Include="..\AiReliabilityEngineering.Orchestration\AiReliabilityEngineering.Orchestration.csproj" />
