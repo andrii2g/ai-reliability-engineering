@@ -20,6 +20,14 @@ dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
 
 The command creates a new run folder under `runs/`, executes fake agents in order, writes placeholder artifacts, writes logs, writes `run-state.json`, and prints a final summary.
 
+Generated runs can be cleaned with:
+
+```bash
+./scripts/aire -cleanup
+```
+
+Cleanup removes generated folders and files under `runs/`, preserves `runs/`, recreates `runs/.gitkeep`, and does not delete anything outside `runs/`.
+
 ## Projects
 
 ### `AiReliabilityEngineering.Cli`
@@ -29,6 +37,7 @@ Contains the command-line entry point.
 Current responsibilities:
 
 - define the `run <idea-file>` command using `System.CommandLine`;
+- define the `-cleanup` option for removing generated run outputs;
 - validate the idea file path;
 - compose the orchestrator with infrastructure implementations;
 - print the final summary;
@@ -53,6 +62,7 @@ Coordinates the fake workflow.
 Current responsibilities:
 
 - create run directories;
+- clean generated run folders and files;
 - copy input files;
 - create and update run state;
 - execute fake agents sequentially;
@@ -116,12 +126,13 @@ Use these commands from the repository root:
 dotnet build AiReliabilityEngineering.slnx
 dotnet test AiReliabilityEngineering.slnx
 ./scripts/aire run samples/idea.md
+./scripts/aire -cleanup
 ```
 
 Current verified test count:
 
 ```text
-18 tests passing
+23 tests passing
 ```
 
 ## Known Deferrals

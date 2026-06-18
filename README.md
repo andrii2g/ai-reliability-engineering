@@ -4,6 +4,10 @@ AIRE is a local-first development orchestrator for building reliable AI-assisted
 
 The first milestone proves the workflow skeleton with fake agents, inspectable run folders, logs, state, reports, and placeholder artifacts.
 
+## Quickstart
+
+See [docs/QUICKSTART.md](docs/QUICKSTART.md).
+
 ## Build
 
 ```bash
@@ -21,6 +25,14 @@ dotnet test AiReliabilityEngineering.slnx
 ```bash
 ./scripts/aire run samples/idea.md
 ```
+
+## Clean Generated Runs
+
+```bash
+./scripts/aire -cleanup
+```
+
+This removes generated folders and files under `runs/`, preserves `runs/`, and recreates `runs/.gitkeep`.
 
 The Bash script wraps the underlying .NET command:
 

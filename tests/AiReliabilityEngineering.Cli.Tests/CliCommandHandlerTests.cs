@@ -9,7 +9,7 @@ public sealed class CliCommandHandlerTests
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
-        var handler = new CliCommandHandler(NotCalled, output, error);
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
         var exitCode = await handler.ExecuteAsync([], CancellationToken.None);
 
@@ -22,7 +22,7 @@ public sealed class CliCommandHandlerTests
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
-        var handler = new CliCommandHandler(NotCalled, output, error);
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
         var exitCode = await handler.ExecuteAsync(["unknown", "idea.md"], CancellationToken.None);
 
@@ -35,7 +35,7 @@ public sealed class CliCommandHandlerTests
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
-        var handler = new CliCommandHandler(NotCalled, output, error);
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
         var exitCode = await handler.ExecuteAsync(["run", "missing.md"], CancellationToken.None);
 
@@ -61,6 +61,7 @@ public sealed class CliCommandHandlerTests
                 Assert.EndsWith("runs", request.RunsDirectory);
                 return Task.FromResult(new RunResult(true, "test-run", Path.Combine(tempDirectory, "runs", "test-run"), "Status: Completed"));
             },
+            CleanupNotCalled,
             output,
             error);
 
@@ -80,6 +81,35 @@ public sealed class CliCommandHandlerTests
         }
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WithCleanupOption_InvokesCleanupAndReturnsZero()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var invoked = false;
+        var handler = new CliCommandHandler(
+            NotCalled,
+            (runsDirectory, cancellationToken) =>
+            {
+                invoked = true;
+                Assert.EndsWith("runs", runsDirectory);
+                return Task.FromResult(new RunCleanupResult(true, runsDirectory, 2, "Runs cleanup completed. Deleted 2 entries."));
+            },
+            output,
+            error);
+
+        var exitCode = await handler.ExecuteAsync(["-cleanup"], CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.True(invoked);
+        Assert.Contains("Runs cleanup completed", output.ToString());
+        Assert.Contains("Deleted entries: 2", output.ToString());
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
     private static Task<RunResult> NotCalled(RunRequest request, CancellationToken cancellationToken)
         => throw new InvalidOperationException("The run delegate should not be called.");
+
+    private static Task<RunCleanupResult> CleanupNotCalled(string runsDirectory, CancellationToken cancellationToken)
+        => throw new InvalidOperationException("The cleanup delegate should not be called.");
 }
