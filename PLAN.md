@@ -1,281 +1,266 @@
-# PLAN.md - Add Simple AIRE Wiki Page
+# PLAN.md - Current CLI and Run Skeleton Alignment
+
+## Project
+
+Repository: `ai-reliability-engineering`
+Solution: `AiReliabilityEngineering.slnx`
+CLI project: `src/AiReliabilityEngineering.Cli`
+CLI command name: `aire`
 
 ## Goal
 
-Add a small, simple wiki-style documentation page to explain the naming used in the AIRE system.
+Keep the current AIRE skeleton aligned, documented, buildable, testable, and runnable.
+Implement the first working command-line interface for AIRE.
 
-This is a documentation-only step. Do not redesign the system. Do not add new runtime features.
+This step must keep the system simple. The CLI should understand basic commands, validate arguments, call placeholder services, print clear output, and return stable exit codes.
 
-The goal is to make the repository easier to understand while keeping the current skeleton working.
+## Current CLI Contract
 
-## Context
+Primary local command through the Bash launcher:
 
-Project naming:
+```bash
+./scripts/aire run samples/idea.md
+./scripts/aire -cleanup
+```
 
-- Repository: `ai-reliability-engineering`
-- Product name: `AIRE`
-- Full meaning: `AI Reliability Engineering`
-- CLI command: `aire`
-- Solution: `AiReliabilityEngineering.slnx`
-- Main CLI project: `AiReliabilityEngineering.Cli`
+Equivalent development commands through `dotnet run`:
 
-Current project rule:
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
+dotnet run --project src/AiReliabilityEngineering.Cli -- -cleanup
+```
 
-Every change must keep the system buildable, testable, and runnable.
+Help is provided by `System.CommandLine`:
 
-## Required Changes
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- --help
+dotnet run --project src/AiReliabilityEngineering.Cli -- -h
+```
 
-### 1. Create `docs/wiki.md`
+## Scope Rules
 
-Create a new Markdown file:
+### Preserve
+
+- Keep `System.CommandLine` as the CLI framework.
+- Keep `run <idea-file>` wired to the current fake workflow.
+- Keep `-cleanup` as the cleanup command shape.
+- Keep cleanup safe: delete only generated entries under `runs/`, preserve `runs/`, and recreate `runs/.gitkeep`.
+- Keep the Bash launcher as the user-facing local entry point.
+- Keep documentation paths under `docs/`, including `docs/PRD.md`.
+- Keep Markdown files UTF-8 without BOM.
+
+### Do Not Regress
+
+- Do not replace the fake workflow with a placeholder-only service.
+- Do not remove run folder creation.
+- Do not remove `run-state.json`.
+- Do not remove fake agents.
+- Do not remove the orchestration pipeline.
+- Do not remove real cleanup behavior.
+- Do not switch back to manual CLI routing.
+- Do not introduce new CLI frameworks.
+- Do not add advanced cleanup options yet, such as `--dry-run`, `--older-than`, `--keep-last`, or `--runs-dir`.
+
+## Expected CLI Behavior
+
+### 1. Run With Existing File
+
+Command:
+
+```bash
+./scripts/aire run samples/idea.md
+```
+
+Expected behavior:
+
+- Validate that `samples/idea.md` exists.
+- Create a new run folder under `runs/`.
+- Copy the input file to `input/idea.md`.
+- Execute fake agents in order:
+  - Requirements
+  - Documentation
+  - Planning
+  - Code
+  - Testing
+  - Review
+- Write placeholder artifacts, reports, logs, workspace files, and `run-state.json`.
+- Print a final summary containing:
+  - `Run ID:`
+  - `Run directory:`
+  - `Status: Completed`
+- Return exit code `0`.
+
+### 2. Run With Missing File
+
+Command:
+
+```bash
+./scripts/aire run missing.md
+```
+
+Expected behavior:
+
+- Print a friendly missing-file error.
+- Do not create a run folder.
+- Return non-zero.
+
+### 3. Invalid Arguments
+
+Examples:
+
+```bash
+./scripts/aire
+./scripts/aire unknown
+./scripts/aire run
+./scripts/aire run samples/idea.md extra
+```
+
+Expected behavior:
+
+- Print usage or a friendly parse error.
+- Return non-zero.
+
+### 4. Cleanup
+
+Command:
+
+```bash
+./scripts/aire -cleanup
+```
+
+Expected behavior:
+
+- Remove generated folders and files directly under `runs/`.
+- Preserve the `runs/` directory.
+- Preserve or recreate `runs/.gitkeep`.
+- Do not delete anything outside `runs/`.
+- Return exit code `0` when cleanup succeeds or there is nothing to clean.
+
+Example output:
 
 ```text
-docs/wiki.md
+Runs cleanup completed. Deleted 1 entries.
+Runs directory: /path/to/repo/runs
+Deleted entries: 1
 ```
 
-The page should be compact and practical.
+## Current Implementation Shape
 
-Suggested title:
+CLI:
 
-```markdown
-# AIRE Wiki
-```
+- `Program.cs` stays thin.
+- `CliCommandHandler` defines the `System.CommandLine` root command, `run <idea-file>`, and `-cleanup`.
+- `CompositionRoot` wires the orchestrator and cleanup service.
 
-Suggested purpose paragraph:
+Orchestration:
 
-```markdown
-This page explains the common names, terms, files, folders, and statements used inside AIRE.
-It is intentionally lightweight and should evolve together with the project.
-```
+- `AireOrchestrator` owns the fake workflow run.
+- `RunDirectoryFactory` creates the run folder layout and copies input.
+- `AgentPipeline` executes fake agents sequentially and stops on failure.
+- `RunCleanupService` safely cleans generated run outputs.
 
-### 2. Add Naming Section
+Infrastructure:
 
-Add a section:
+- Console, file, and composite run loggers.
+- JSON run state store.
+- Fake and shell tool executors.
 
-```markdown
-## Naming
-```
-
-Include the following entries:
-
-```markdown
-| Name | Meaning |
-| --- | --- |
-| AIRE | Product name and short form of AI Reliability Engineering |
-| AI Reliability Engineering | The discipline/practice behind the project: making AI-assisted development observable, testable, reviewable, and reliable |
-| aire | CLI command name |
-| ai-reliability-engineering | GitHub repository name |
-| AiReliabilityEngineering.slnx | .NET solution file |
-| AiReliabilityEngineering.Cli | .NET CLI project |
-```
-
-### 3. Add Core Terms Section
-
-Add a section:
-
-```markdown
-## Core Terms
-```
-
-Include these terms:
-
-```markdown
-| Term | Meaning |
-| --- | --- |
-| Run | One execution of the AIRE workflow |
-| Run ID | Unique identifier of a workflow execution |
-| Run Folder | Folder under `runs/` containing input, artifacts, reports, logs, workspace, and run state |
-| Agent | Workflow component responsible for one specific part of the process |
-| Fake Agent | Stub implementation used by the skeleton to keep the full pipeline working |
-| Orchestrator | Component that coordinates the workflow and executes agents in order |
-| Artifact | Generated file such as `specification.json`, `README.md`, `PLAN.md`, `tasks.json`, or `review.md` |
-| Report | Generated diagnostic/output file such as `tests.md` |
-| Workspace | Folder where generated or modified repository files are placed |
-| Tool Executor | Abstraction for running tools or commands such as shell, Codex, OpenCode, Git, Docker, or dotnet |
-```
-
-### 4. Add Workflow Terms Section
-
-Add a section:
-
-```markdown
-## Workflow Terms
-```
-
-Include:
-
-```markdown
-| Step | Meaning |
-| --- | --- |
-| Requirements | Convert the input idea into a structured specification |
-| Documentation | Generate initial documentation files |
-| Planning | Generate implementation tasks |
-| Code | Create or update source files |
-| Testing | Generate or run tests and write test reports |
-| Review | Review generated artifacts and workflow result |
-```
-
-### 5. Add Folder Contract Section
-
-Add a section:
-
-```markdown
 ## Run Folder Contract
-```
 
-Include the expected run folder shape:
+Each successful run creates:
 
 ```text
 runs/{run-id}/
-├─ input/
-├─ workspace/
-├─ artifacts/
-├─ reports/
-├─ logs/
-└─ run-state.json
+|-- input/
+|-- workspace/
+|-- artifacts/
+|-- reports/
+|-- logs/
+`-- run-state.json
 ```
 
-Briefly explain each folder:
+Expected files:
 
-```markdown
-| Path | Purpose |
-| --- | --- |
-| `input/` | Copied input files for the run |
-| `workspace/` | Generated or modified repository content |
-| `artifacts/` | Main generated files |
-| `reports/` | Build, test, review, and summary reports |
-| `logs/` | Run and agent logs |
-| `run-state.json` | Persistent state of the run |
+```text
+input/idea.md
+artifacts/specification.json
+artifacts/README.md
+artifacts/PLAN.md
+artifacts/tasks.json
+artifacts/review.md
+reports/tests.md
+logs/orchestrator.log
+workspace/README.md
+workspace/src/placeholder.txt
+run-state.json
 ```
 
-### 6. Add Project Statements Section
+Final `run-state.json` must show `Completed` and six successful steps.
 
-Add a section:
+## Tests
 
-```markdown
-## Project Statements
-```
+Keep tests for:
 
-Include these statements:
+- Core model behavior.
+- CLI invalid arguments and missing input.
+- CLI successful `run` invocation.
+- CLI `-cleanup` invocation.
+- Orchestration run folder creation.
+- Input copy to `input/idea.md`.
+- Expected artifact, report, log, workspace, and state files.
+- Completed state with six successful steps.
+- Pipeline stops on failed agent.
+- Cleanup deletes only generated entries under `runs/`.
+- Cleanup preserves or recreates `runs/.gitkeep`.
+- Cleanup does not delete anything outside `runs/`.
 
-```markdown
-- AIRE is local-first.
-- AIRE should be reliable before it becomes smart.
-- The developer stays in control.
-- Every step must keep the system runnable.
-- Fake agents are valid until replaced by real implementations.
-- Codex and OpenCode are tool executors, not the core architecture.
-- Logs, artifacts, reports, and run state are part of the product.
-- Build and tests must not be hidden or ignored.
-```
-
-### 7. Add Documentation Map Section
-
-Add a section:
-
-```markdown
-## Documentation Map
-```
-
-Include:
-
-```markdown
-| File | Purpose |
-| --- | --- |
-| `README.md` | User-facing overview and quick start |
-| `docs/PRD.md` | Product requirements and high-level system description |
-| `PLAN.md` | Codex-ready implementation plan |
-| `docs/wiki.md` | Naming, terms, and project statements |
-| `docs/QUICKSTART.md` | Quickstart for running the current skeleton |
-| `docs/implementation.md` | Notes about the current implementation |
-| `docs/architecture.md` | Deeper architecture notes when needed |
-| `docs/workflow.md` | Detailed workflow notes when needed |
-```
-
-If some files do not exist yet, do not create them unless they are already planned. The wiki can mention them as intended documentation locations.
-
-### 8. Update `README.md`
-
-Add a small documentation section to `README.md`.
-
-Example:
-
-```markdown
 ## Documentation
 
-- [PRD](docs/PRD.md) - product requirements and high-level description
-- [PLAN](PLAN.md) - Codex-ready implementation plan
-- [AIRE Wiki](docs/wiki.md) - project terms, naming, and common statements
+Keep these docs consistent with the current CLI contract:
+
+```bash
+./scripts/aire run samples/idea.md
+./scripts/aire -cleanup
 ```
 
-Keep it short.
+Relevant files:
 
-### 9. Optional: Link Wiki from `docs/PRD.md`
+- `README.md`
+- `docs/PRD.md`
+- `docs/wiki.md`
+- `docs/QUICKSTART.md`
+- `docs/implementation.md`
 
-If `docs/PRD.md` already exists, add one short link to `docs/wiki.md`.
+Do not refer to a root-level `PRD.md`; the product requirements document lives at `docs/PRD.md`.
 
-Example:
-
-```markdown
-For common naming and terminology, see [AIRE Wiki](wiki.md).
-```
-
-Do not rewrite `docs/PRD.md`.
-
-## File Encoding
-
-Write new and updated Markdown files as UTF-8 without BOM.
-
-## Non-Goals
-
-Do not:
-
-- add a real GitHub Wiki;
-- add a documentation generator;
-- add MkDocs, Docusaurus, or static site tooling;
-- add new CLI commands;
-- change the orchestration workflow;
-- rename existing projects;
-- modify runtime behavior;
-- introduce new packages.
-
-## Verification
+## Verification Commands
 
 Run:
 
 ```bash
-dotnet build
-dotnet test
+dotnet build AiReliabilityEngineering.slnx
+dotnet test AiReliabilityEngineering.slnx
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
+dotnet run --project src/AiReliabilityEngineering.Cli -- -cleanup
 ```
 
-If the CLI already works, also run:
+On Linux, WSL, or a Bash-capable environment, also verify:
 
 ```bash
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
+chmod +x scripts/aire
+./scripts/aire run samples/idea.md
+./scripts/aire -cleanup
 ```
 
-The commands must still pass.
-
-## Expected Result
-
-After this step, the repository should contain:
-
-```text
-docs/wiki.md
-README.md updated with link to docs/wiki.md
-```
-
-The project must still build and test successfully.
-
-## Definition of Done
+## Acceptance Criteria
 
 This step is complete when:
 
-- `docs/wiki.md` exists;
-- the wiki explains AIRE naming and core terms;
-- `README.md` links to the wiki;
-- `docs/PRD.md` links to the wiki if `docs/PRD.md` exists;
-- no runtime behavior is changed;
-- `dotnet build` passes;
-- `dotnet test` passes;
-- existing CLI workflow still works.
+- `dotnet build AiReliabilityEngineering.slnx` passes.
+- `dotnet test AiReliabilityEngineering.slnx` passes.
+- `run <idea-file>` creates a completed fake workflow run.
+- `-cleanup` cleans generated run outputs safely.
+- `runs/.gitkeep` exists after cleanup.
+- Documentation references `docs/PRD.md`, not root `PRD.md`.
+- Markdown files touched by this step are UTF-8 without BOM.
+- No mojibake characters remain in `PLAN.md`.
