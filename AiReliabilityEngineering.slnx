@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AiReliabilityEngineering.Cli/AiReliabilityEngineering.Cli.csproj" />
+    <Project Path="src/AiReliabilityEngineering.Core/AiReliabilityEngineering.Core.csproj" />
+    <Project Path="src/AiReliabilityEngineering.Infrastructure/AiReliabilityEngineering.Infrastructure.csproj" />
+    <Project Path="src/AiReliabilityEngineering.Orchestration/AiReliabilityEngineering.Orchestration.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AiReliabilityEngineering.Cli.Tests/AiReliabilityEngineering.Cli.Tests.csproj" />
+    <Project Path="tests/AiReliabilityEngineering.Core.Tests/AiReliabilityEngineering.Core.Tests.csproj" />
+    <Project Path="tests/AiReliabilityEngineering.Orchestration.Tests/AiReliabilityEngineering.Orchestration.Tests.csproj" />
+  </Folder>
+</Solution>
