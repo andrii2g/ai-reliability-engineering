@@ -1,5 +1,7 @@
 # AIRE — AI Reliability Engineering
 
+For common naming and terminology, see [AIRE Wiki](wiki.md).
+
 ## High-Level Description
 
 AIRE is a local-first development orchestrator for building reliable AI-assisted software workflows.

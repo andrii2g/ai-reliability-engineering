@@ -8,6 +8,12 @@ The first milestone proves the workflow skeleton with fake agents, inspectable r
 
 See [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
+## Documentation
+
+- [PRD](docs/PRD.md) - product requirements and high-level description
+- [PLAN](PLAN.md) - Codex-ready implementation plan
+- [AIRE Wiki](docs/wiki.md) - project terms, naming, and common statements
+
 ## Build
 
 ```bash
