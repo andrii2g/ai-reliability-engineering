@@ -100,6 +100,12 @@ public sealed class CliCommandHandlerTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WithAiDemoProfile_PassesAiDemoProfile()
+    {
+        await ExecuteRunProfileTestAsync("ai-demo", WorkflowProfile.AiDemo);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithUnknownProfile_ReturnsInvalidArguments()
     {
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
@@ -116,7 +122,7 @@ public sealed class CliCommandHandlerTests
 
             Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
             Assert.Contains("Unsupported workflow profile: unknown", error.ToString());
-            Assert.Contains("Supported profiles: fake, ai-requirements", error.ToString());
+            Assert.Contains("Supported profiles: fake, ai-requirements, ai-demo", error.ToString());
         }
         finally
         {
@@ -175,6 +181,32 @@ public sealed class CliCommandHandlerTests
         {
             var exitCode = await handler.ExecuteAsync(
                 ["run", ideaFilePath, "--profile", "ai-requirements", "--provider", "openai"],
+                CancellationToken.None);
+
+            Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
+            Assert.Contains("--model is required when --provider openai is used", error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithAiDemoOpenAiProviderWithoutModelReturnsInvalidArguments()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDirectory);
+        var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
+
+        try
+        {
+            var exitCode = await handler.ExecuteAsync(
+                ["run", ideaFilePath, "--profile", "ai-demo", "--provider", "openai"],
                 CancellationToken.None);
 
             Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
@@ -269,7 +301,43 @@ public sealed class CliCommandHandlerTests
         Assert.Contains("--model", output.ToString());
         Assert.Contains("fake", output.ToString());
         Assert.Contains("ai-requirements", output.ToString());
+        Assert.Contains("ai-demo", output.ToString());
         Assert.Contains("openai", output.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithAiDemoFakeProvider_GeneratesRunArtifactsInTemporaryCurrentDirectory()
+    {
+        var previousCurrentDirectory = Directory.GetCurrentDirectory();
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDirectory);
+        var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
+        await File.WriteAllTextAsync(ideaFilePath, "# Redis TTL Audit Tool\n\nScan Redis keys.\n");
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = CliCommandHandler.CreateDefault(output, error);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDirectory);
+
+            var exitCode = await handler.ExecuteAsync(
+                ["run", ideaFilePath, "--profile", "ai-demo", "--provider", "fake"],
+                CancellationToken.None);
+
+            Assert.Equal(CliExitCodes.Success, exitCode);
+            var runsDirectory = Path.Combine(tempDirectory, "runs");
+            var runDirectory = Directory.GetDirectories(runsDirectory).Single();
+            Assert.True(File.Exists(Path.Combine(runDirectory, "artifacts", "README.md")));
+            Assert.True(File.Exists(Path.Combine(runDirectory, "artifacts", "PLAN.md")));
+            Assert.True(File.Exists(Path.Combine(runDirectory, "artifacts", "tasks.json")));
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(previousCurrentDirectory);
+            Directory.Delete(tempDirectory, recursive: true);
+        }
     }
 
     [Fact]

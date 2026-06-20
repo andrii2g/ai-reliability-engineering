@@ -144,6 +144,33 @@ public sealed class AireOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_WithAiDemoProfile_CompletesAndWritesAiArtifacts()
+    {
+        using var test = TestWorkspace.Create();
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiDemo), CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.Contains("Completed", result.Message);
+        Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "specification.json")));
+        Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "requirements.md")));
+        Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "README.md")));
+        Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "PLAN.md")));
+        Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "tasks.json")));
+
+        await using var tasksStream = File.OpenRead(Path.Combine(result.RunDirectory!, "artifacts", "tasks.json"));
+        using var tasksDocument = await JsonDocument.ParseAsync(tasksStream, cancellationToken: CancellationToken.None);
+        Assert.True(tasksDocument.RootElement.TryGetProperty("tasks", out _));
+
+        await using var stateStream = File.OpenRead(Path.Combine(result.RunDirectory!, "run-state.json"));
+        using var stateDocument = await JsonDocument.ParseAsync(stateStream, cancellationToken: CancellationToken.None);
+        var steps = stateDocument.RootElement.GetProperty("steps");
+        Assert.Equal("Completed", stateDocument.RootElement.GetProperty("status").GetString());
+        Assert.Equal("AiRequirementsAgent", steps[0].GetProperty("agentName").GetString());
+        Assert.Equal("AiDocumentationAgent", steps[1].GetProperty("agentName").GetString());
+        Assert.Equal("AiPlannerAgent", steps[2].GetProperty("agentName").GetString());
+    }
+
+    [Fact]
     public async Task RunAsync_WithAiRequirementsProfilePassesProviderSelectionToPipelineFactory()
     {
         AiProviderSelection? receivedSelection = null;

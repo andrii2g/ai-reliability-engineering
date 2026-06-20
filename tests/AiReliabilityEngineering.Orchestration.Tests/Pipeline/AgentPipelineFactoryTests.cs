@@ -46,6 +46,26 @@ public sealed class AgentPipelineFactoryTests
     }
 
     [Fact]
+    public void Create_AiDemoProfileCreatesAiAgentsThenFakeAgents()
+    {
+        var pipeline = CreateFactory().Create(
+            WorkflowProfile.AiDemo,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(WorkflowStep.Requirements, pipeline.Steps[0].Step);
+        Assert.IsType<AiRequirementsAgent>(pipeline.Steps[0].Agent);
+        Assert.Equal(WorkflowStep.Documentation, pipeline.Steps[1].Step);
+        Assert.IsType<AiDocumentationAgent>(pipeline.Steps[1].Agent);
+        Assert.Equal(WorkflowStep.Planning, pipeline.Steps[2].Step);
+        Assert.IsType<AiPlannerAgent>(pipeline.Steps[2].Agent);
+        Assert.IsType<FakeCodeAgent>(pipeline.Steps[3].Agent);
+        Assert.IsType<FakeTestAgent>(pipeline.Steps[4].Agent);
+        Assert.IsType<FakeReviewerAgent>(pipeline.Steps[5].Agent);
+    }
+
+    [Fact]
     public void Create_BothProfilesKeepSameStepOrder()
     {
         var factory = CreateFactory();
@@ -57,6 +77,11 @@ public sealed class AgentPipelineFactoryTests
             new InMemoryRunStateStore()).Steps.Select(step => step.Step);
         var aiSteps = factory.Create(
             WorkflowProfile.AiRequirements,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore()).Steps.Select(step => step.Step);
+        var aiDemoSteps = factory.Create(
+            WorkflowProfile.AiDemo,
             AiProviderSelection.DefaultFake,
             new InMemoryRunLogger(),
             new InMemoryRunStateStore()).Steps.Select(step => step.Step);
@@ -72,6 +97,7 @@ public sealed class AgentPipelineFactoryTests
         ];
         Assert.Equal(expected, fakeSteps);
         Assert.Equal(expected, aiSteps);
+        Assert.Equal(expected, aiDemoSteps);
     }
 
     [Fact]
@@ -105,6 +131,25 @@ public sealed class AgentPipelineFactoryTests
             new InMemoryRunStateStore());
 
         Assert.Same(expectedSelection, receivedSelection);
+    }
+
+    [Fact]
+    public void Create_AiDemoProfileCreatesSelectedProviderOnce()
+    {
+        var callCount = 0;
+        var factory = new AgentPipelineFactory(_ =>
+        {
+            callCount++;
+            return new FakeAiProvider();
+        });
+
+        _ = factory.Create(
+            WorkflowProfile.AiDemo,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(1, callCount);
     }
 
     private static AgentPipelineFactory CreateFactory()

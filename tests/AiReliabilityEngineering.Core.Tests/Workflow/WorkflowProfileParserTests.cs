@@ -34,9 +34,19 @@ public sealed class WorkflowProfileParserTests
         Assert.Equal(WorkflowProfile.AiRequirements, profile);
     }
 
+    [Fact]
+    public void TryParse_AiDemoParses()
+    {
+        var succeeded = WorkflowProfileParser.TryParse("ai-demo", out var profile);
+
+        Assert.True(succeeded);
+        Assert.Equal(WorkflowProfile.AiDemo, profile);
+    }
+
     [Theory]
     [InlineData("FAKE", WorkflowProfile.Fake)]
     [InlineData("Ai-Requirements", WorkflowProfile.AiRequirements)]
+    [InlineData("Ai-Demo", WorkflowProfile.AiDemo)]
     public void TryParse_IsCaseInsensitive(string value, WorkflowProfile expected)
     {
         var succeeded = WorkflowProfileParser.TryParse(value, out var profile);
@@ -57,8 +67,15 @@ public sealed class WorkflowProfileParserTests
     [Theory]
     [InlineData(WorkflowProfile.Fake, "fake")]
     [InlineData(WorkflowProfile.AiRequirements, "ai-requirements")]
+    [InlineData(WorkflowProfile.AiDemo, "ai-demo")]
     public void ToCliName_ReturnsKebabCaseNames(WorkflowProfile profile, string expected)
     {
         Assert.Equal(expected, WorkflowProfileParser.ToCliName(profile));
+    }
+
+    [Fact]
+    public void SupportedCliNames_IncludesAiDemo()
+    {
+        Assert.Contains("ai-demo", WorkflowProfileParser.SupportedCliNames);
     }
 }
