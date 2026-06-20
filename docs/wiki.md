@@ -119,6 +119,7 @@ Current profiles:
 - `ai-requirements`
 - `ai-demo`
 - `ai-demo-dotnet`
+- `ai-demo-dotnet-review`
 
 ## ai-demo Profile
 
@@ -135,6 +136,14 @@ Runs build and test commands in the run workspace and writes build/test reports.
 ## ai-demo-dotnet Profile
 
 Runs requirements, documentation, planning, template code generation, build/test validation, and fake review.
+
+## ArtifactReviewAgent
+
+Performs deterministic review of generated artifacts and workspace files.
+
+## ai-demo-dotnet-review Profile
+
+Runs the current most complete local demo pipeline, ending with ArtifactReviewAgent.
 
 ## Documentation Map
 
@@ -156,6 +165,8 @@ Runs requirements, documentation, planning, template code generation, build/test
 | `docs/template-code-agent.md` | Template code generation notes |
 | `docs/build-test-agent.md` | Build/test validation notes |
 | `docs/demo-dotnet-workspace.md` | Generated .NET workspace demo |
+| `docs/artifact-review-agent.md` | Deterministic final review notes |
+| `docs/demo-final-review.md` | Final review demo |
 | `docs/workflow-profiles.md` | Workflow profile usage |
 | `docs/architecture.md` | Deeper architecture notes when needed |
 | `docs/workflow.md` | Detailed workflow notes when needed |

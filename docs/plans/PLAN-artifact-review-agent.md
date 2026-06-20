@@ -1,4 +1,4 @@
-# PLAN.md - AIRE Step 10.7: ArtifactReviewAgent and Final Run Summary
+# PLAN.md - AIRE: ArtifactReviewAgent and Final Run Summary
 
 ## Purpose
 

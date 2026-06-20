@@ -136,6 +136,28 @@ Build and test reports are written to:
 
 This demo does not use AI to write source code yet. It uses a deterministic template so the build/test validation path is stable.
 
+## Final Review Demo
+
+Run the most complete local demo:
+
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
+```
+
+The run produces:
+
+- requirements artifacts
+- documentation artifacts
+- planning artifacts
+- generated .NET workspace
+- build/test reports
+- final review reports
+
+Review:
+
+- `reports/final-review.md`
+- `reports/workspace-summary.md`
+
 ## Real Provider Demo
 
 AIRE can run the AI requirements workflow with OpenAI:

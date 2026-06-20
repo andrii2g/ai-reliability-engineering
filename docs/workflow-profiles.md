@@ -75,3 +75,15 @@ aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet --provider fake
 ```
 
 The generated source code is template-based and not AI-generated yet.
+
+## ai-demo-dotnet-review
+
+This profile runs AI-aware requirements, documentation, and planning agents, generates a deterministic .NET CLI workspace, validates it with build/test commands, and writes deterministic final review reports.
+
+Run with the fake provider:
+
+```bash
+aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
+```
+
+The review is deterministic and does not call AI.
