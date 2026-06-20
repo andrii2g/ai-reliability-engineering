@@ -23,7 +23,7 @@ public sealed class AireOrchestrator
         _loggerFactory = loggerFactory;
         _stateStoreFactory = stateStoreFactory;
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _pipelineFactory = pipelineFactory ?? new AgentPipelineFactory(_ => new MissingAiProvider(), _timeProvider);
+        _pipelineFactory = pipelineFactory ?? new AgentPipelineFactory(_ => new MissingAiProvider(), timeProvider: _timeProvider);
     }
 
     public async Task<RunResult> RunAsync(RunRequest request, CancellationToken cancellationToken)

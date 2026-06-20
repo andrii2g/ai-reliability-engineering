@@ -1,5 +1,6 @@
 using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Core.Steps;
+using AiReliabilityEngineering.Core.Tools;
 using AiReliabilityEngineering.Core.Workflow;
 using AiReliabilityEngineering.Orchestration.Agents;
 using AiReliabilityEngineering.Orchestration.Logging;
@@ -10,13 +11,16 @@ namespace AiReliabilityEngineering.Orchestration.Pipeline;
 public sealed class AgentPipelineFactory
 {
     private readonly Func<AiProviderSelection, IAiProvider> _aiProviderFactory;
+    private readonly Func<IToolExecutor> _toolExecutorFactory;
     private readonly TimeProvider _timeProvider;
 
     public AgentPipelineFactory(
         Func<AiProviderSelection, IAiProvider> aiProviderFactory,
+        Func<IToolExecutor>? toolExecutorFactory = null,
         TimeProvider? timeProvider = null)
     {
         _aiProviderFactory = aiProviderFactory ?? throw new ArgumentNullException(nameof(aiProviderFactory));
+        _toolExecutorFactory = toolExecutorFactory ?? (() => new MissingToolExecutor());
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -35,6 +39,7 @@ public sealed class AgentPipelineFactory
             WorkflowProfile.Fake => CreateFakeSteps(logger),
             WorkflowProfile.AiRequirements => CreateAiRequirementsSteps(aiProviderSelection, logger),
             WorkflowProfile.AiDemo => CreateAiDemoSteps(aiProviderSelection, logger),
+            WorkflowProfile.AiDemoDotnet => CreateAiDemoDotnetSteps(aiProviderSelection, logger),
             _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, null)
         };
 
@@ -79,5 +84,31 @@ public sealed class AgentPipelineFactory
             new(WorkflowStep.Testing, new FakeTestAgent(logger)),
             new(WorkflowStep.Review, new FakeReviewerAgent(logger))
         ];
+    }
+
+    private IReadOnlyList<AgentPipelineStep> CreateAiDemoDotnetSteps(
+        AiProviderSelection aiProviderSelection,
+        IRunLogger logger)
+    {
+        var aiProvider = _aiProviderFactory(aiProviderSelection);
+        return
+        [
+            new(WorkflowStep.Requirements, new AiRequirementsAgent(aiProvider, logger)),
+            new(WorkflowStep.Documentation, new AiDocumentationAgent(aiProvider, logger)),
+            new(WorkflowStep.Planning, new AiPlannerAgent(aiProvider, logger)),
+            new(WorkflowStep.Code, new TemplateCodeAgent(logger)),
+            new(WorkflowStep.Testing, new BuildTestAgent(_toolExecutorFactory(), logger)),
+            new(WorkflowStep.Review, new FakeReviewerAgent(logger))
+        ];
+    }
+
+    private sealed class MissingToolExecutor : IToolExecutor
+    {
+        public Task<ToolExecutionResult> ExecuteAsync(
+            ToolExecutionRequest request,
+            CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("A tool executor must be configured for build/test workflow profiles.");
+        }
     }
 }

@@ -52,7 +52,7 @@ public sealed class CliCommandHandler(
         };
         var profileOption = new Option<string>("--profile")
         {
-            Description = "Workflow profile to use. Supported values: fake, ai-requirements, ai-demo. Default: fake.",
+            Description = $"Workflow profile to use. Supported values: {string.Join(", ", WorkflowProfileParser.SupportedCliNames)}. Default: fake.",
             DefaultValueFactory = _ => WorkflowProfileParser.ToCliName(WorkflowProfile.Fake)
         };
         var providerOption = new Option<string>("--provider")

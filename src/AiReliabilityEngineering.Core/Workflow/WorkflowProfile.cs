@@ -4,5 +4,6 @@ public enum WorkflowProfile
 {
     Fake,
     AiRequirements,
-    AiDemo
+    AiDemo,
+    AiDemoDotnet
 }

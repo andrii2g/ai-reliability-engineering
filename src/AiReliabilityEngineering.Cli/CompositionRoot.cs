@@ -2,6 +2,7 @@ using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Infrastructure.Logging;
 using AiReliabilityEngineering.Infrastructure.Serialization;
+using AiReliabilityEngineering.Infrastructure.Tools;
 using AiReliabilityEngineering.Orchestration;
 using AiReliabilityEngineering.Orchestration.Agents;
 using AiReliabilityEngineering.Orchestration.Logging;
@@ -38,5 +39,5 @@ public static class CompositionRoot
         => new(CreateAiProvider(AiProviderSelection.DefaultFake), logger);
 
     public static AgentPipelineFactory CreateAgentPipelineFactory()
-        => new(CreateAiProvider);
+        => new(CreateAiProvider, () => new ShellToolExecutor());
 }
