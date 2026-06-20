@@ -101,6 +101,14 @@ The normalized requirements contract produced by requirements analysis. Later ag
 
 The first AI-aware AIRE agent. It calls `IAiProvider` but currently writes deterministic artifacts using local normalization.
 
+## AiDocumentationAgent
+
+Generates `README.md` and `PLAN.md` from `specification.json`.
+
+## AiPlannerAgent
+
+Generates `tasks.json` from `specification.json`.
+
 ## Workflow Profile
 
 A named pipeline composition that selects which agents are used for a run.
@@ -109,6 +117,11 @@ Current profiles:
 
 - `fake`
 - `ai-requirements`
+- `ai-demo`
+
+## ai-demo Profile
+
+Runs `AiRequirementsAgent`, `AiDocumentationAgent`, and `AiPlannerAgent` before fake code/test/review steps.
 
 ## Documentation Map
 
@@ -124,6 +137,9 @@ Current profiles:
 | `docs/openai-provider.md` | OpenAI provider usage and scope |
 | `docs/demo-openai-requirements.md` | Manual OpenAI requirements demo |
 | `docs/ai-requirements-agent.md` | AI requirements agent notes |
+| `docs/ai-documentation-agent.md` | AI documentation agent notes |
+| `docs/ai-planner-agent.md` | AI planner agent notes |
+| `docs/demo-ai-artifacts.md` | AI artifacts demo |
 | `docs/workflow-profiles.md` | Workflow profile usage |
 | `docs/architecture.md` | Deeper architecture notes when needed |
 | `docs/workflow.md` | Detailed workflow notes when needed |

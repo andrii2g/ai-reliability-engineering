@@ -89,6 +89,31 @@ dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --p
 
 The `ai-requirements` profile uses `AiRequirementsAgent` with `FakeAiProvider`. It does not require API keys and does not call the network.
 
+## AI Artifacts Demo
+
+Generate requirements, documentation, and planning artifacts locally with the fake provider:
+
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo --provider fake
+```
+
+Run the same profile with OpenAI:
+
+```bash
+export OPENAI_API_KEY="..."
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo --provider openai --model <model-name>
+```
+
+The demo produces:
+
+- `artifacts/specification.json`
+- `artifacts/requirements.md`
+- `artifacts/README.md`
+- `artifacts/PLAN.md`
+- `artifacts/tasks.json`
+
+Source code generation is not implemented yet.
+
 ## Real Provider Demo
 
 AIRE can run the AI requirements workflow with OpenAI:

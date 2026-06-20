@@ -45,3 +45,21 @@ aire run samples/redis-ttl-audit.md --profile ai-requirements --provider openai 
 ```
 
 The OpenAI provider requires `OPENAI_API_KEY` to be set in the environment.
+
+## ai-demo
+
+This profile uses AI-aware requirements, documentation, and planning agents, then fake code/test/review agents.
+
+Run with the fake provider:
+
+```bash
+aire run samples/redis-ttl-audit.md --profile ai-demo --provider fake
+```
+
+Run with the OpenAI provider:
+
+```bash
+aire run samples/redis-ttl-audit.md --profile ai-demo --provider openai --model <model-name>
+```
+
+The OpenAI run may fail normally if provider output does not match the required documentation markers or planner JSON shape.
