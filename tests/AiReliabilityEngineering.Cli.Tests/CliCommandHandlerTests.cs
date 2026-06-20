@@ -13,7 +13,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync([], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync([], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
         Assert.Contains("Usage:", output.ToString());
@@ -27,7 +27,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync(["unknown", "idea.md"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["unknown", "idea.md"], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
         Assert.Contains("Unrecognized command or argument", error.ToString());
@@ -40,7 +40,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync(["run", "missing.md"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["run", "missing.md"], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.InputFileNotFound, exitCode);
         Assert.Contains("Idea file not found", error.ToString());
@@ -52,7 +52,7 @@ public sealed class CliCommandHandlerTests
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var invoked = false;
@@ -73,7 +73,7 @@ public sealed class CliCommandHandlerTests
 
         try
         {
-            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath], CancellationToken.None);
+            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath], TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.Success, exitCode);
             Assert.True(invoked);
@@ -106,19 +106,25 @@ public sealed class CliCommandHandlerTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WithAiDemoDotnetProfile_PassesAiDemoDotnetProfile()
+    {
+        await ExecuteRunProfileTestAsync("ai-demo-dotnet", WorkflowProfile.AiDemoDotnet);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithUnknownProfile_ReturnsInvalidArguments()
     {
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
         try
         {
-            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--profile", "unknown"], CancellationToken.None);
+            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--profile", "unknown"], TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
             Assert.Contains("Unsupported workflow profile: unknown", error.ToString());
@@ -172,7 +178,7 @@ public sealed class CliCommandHandlerTests
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
@@ -181,7 +187,7 @@ public sealed class CliCommandHandlerTests
         {
             var exitCode = await handler.ExecuteAsync(
                 ["run", ideaFilePath, "--profile", "ai-requirements", "--provider", "openai"],
-                CancellationToken.None);
+                TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
             Assert.Contains("--model is required when --provider openai is used", error.ToString());
@@ -198,7 +204,7 @@ public sealed class CliCommandHandlerTests
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
@@ -207,7 +213,7 @@ public sealed class CliCommandHandlerTests
         {
             var exitCode = await handler.ExecuteAsync(
                 ["run", ideaFilePath, "--profile", "ai-demo", "--provider", "openai"],
-                CancellationToken.None);
+                TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
             Assert.Contains("--model is required when --provider openai is used", error.ToString());
@@ -224,14 +230,14 @@ public sealed class CliCommandHandlerTests
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
         try
         {
-            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--provider", "unknown"], CancellationToken.None);
+            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--provider", "unknown"], TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
             Assert.Contains("Unsupported AI provider: unknown", error.ToString());
@@ -260,7 +266,7 @@ public sealed class CliCommandHandlerTests
             output,
             error);
 
-        var exitCode = await handler.ExecuteAsync(["cleanup"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["cleanup"], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.Success, exitCode);
         Assert.True(invoked);
@@ -278,7 +284,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync([helpOption], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync([helpOption], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.Success, exitCode);
         Assert.Contains("AIRE", output.ToString());
@@ -293,7 +299,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync(["run", "--help"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["run", "--help"], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.Success, exitCode);
         Assert.Contains("--profile", output.ToString());
@@ -302,6 +308,7 @@ public sealed class CliCommandHandlerTests
         Assert.Contains("fake", output.ToString());
         Assert.Contains("ai-requirements", output.ToString());
         Assert.Contains("ai-demo", output.ToString());
+        Assert.Contains("ai-demo-dotnet", output.ToString());
         Assert.Contains("openai", output.ToString());
     }
 
@@ -312,7 +319,7 @@ public sealed class CliCommandHandlerTests
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Redis TTL Audit Tool\n\nScan Redis keys.\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Redis TTL Audit Tool\n\nScan Redis keys.\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var handler = CliCommandHandler.CreateDefault(output, error);
@@ -323,7 +330,7 @@ public sealed class CliCommandHandlerTests
 
             var exitCode = await handler.ExecuteAsync(
                 ["run", ideaFilePath, "--profile", "ai-demo", "--provider", "fake"],
-                CancellationToken.None);
+                TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.Success, exitCode);
             var runsDirectory = Path.Combine(tempDirectory, "runs");
@@ -347,7 +354,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync(["run"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["run"], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
     }
@@ -359,7 +366,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync(["cleanup", "unexpected"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["cleanup", "unexpected"], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
     }
@@ -371,7 +378,7 @@ public sealed class CliCommandHandlerTests
         using var error = new StringWriter();
         var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
 
-        var exitCode = await handler.ExecuteAsync(["-cleanup"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["-cleanup"], TestContext.Current.CancellationToken);
 
         Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
     }
@@ -387,7 +394,7 @@ public sealed class CliCommandHandlerTests
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var invoked = false;
@@ -404,7 +411,7 @@ public sealed class CliCommandHandlerTests
 
         try
         {
-            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--profile", profileValue], CancellationToken.None);
+            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--profile", profileValue], TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.Success, exitCode);
             Assert.True(invoked);
@@ -425,7 +432,7 @@ public sealed class CliCommandHandlerTests
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
         var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
-        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n", TestContext.Current.CancellationToken);
         using var output = new StringWriter();
         using var error = new StringWriter();
         var invoked = false;
@@ -444,7 +451,7 @@ public sealed class CliCommandHandlerTests
         try
         {
             var args = new[] { "run", ideaFilePath }.Concat(runOptions).ToArray();
-            var exitCode = await handler.ExecuteAsync(args, CancellationToken.None);
+            var exitCode = await handler.ExecuteAsync(args, TestContext.Current.CancellationToken);
 
             Assert.Equal(CliExitCodes.Success, exitCode);
             Assert.True(invoked);

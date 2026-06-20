@@ -13,11 +13,11 @@ public sealed class AiRequirementsAgentTests
     public async Task ExecuteAsync_CallsAiProvider()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool\n\nScan Redis keys.", CancellationToken.None);
+        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool\n\nScan Redis keys.", TestContext.Current.CancellationToken);
         var provider = new RecordingAiProvider();
         var agent = new AiRequirementsAgent(provider, new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.True(provider.WasCalled);
@@ -30,10 +30,10 @@ public sealed class AiRequirementsAgentTests
     public async Task ExecuteAsync_WritesRequirementArtifacts()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", CancellationToken.None);
+        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", TestContext.Current.CancellationToken);
         var agent = new AiRequirementsAgent(new RecordingAiProvider(), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "specification.json")));
@@ -46,13 +46,13 @@ public sealed class AiRequirementsAgentTests
     public async Task ExecuteAsync_GeneratedSpecificationIsValidJson()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", CancellationToken.None);
+        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", TestContext.Current.CancellationToken);
         var agent = new AiRequirementsAgent(new RecordingAiProvider(), new InMemoryRunLogger());
 
-        await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         await using var stream = File.OpenRead(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "specification.json"));
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(document.RootElement.TryGetProperty("projectName", out _));
         Assert.True(document.RootElement.TryGetProperty("summary", out _));
         Assert.True(document.RootElement.TryGetProperty("goals", out var goals));
@@ -65,7 +65,7 @@ public sealed class AiRequirementsAgentTests
         using var workspace = TestRunWorkspace.Create();
         var agent = new AiRequirementsAgent(new RecordingAiProvider(), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Copied idea file not found", result.Message);
@@ -75,10 +75,10 @@ public sealed class AiRequirementsAgentTests
     public async Task ExecuteAsync_ProviderFailureReturnsAgentFailure()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", CancellationToken.None);
+        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", TestContext.Current.CancellationToken);
         var agent = new AiRequirementsAgent(new FailingAiProvider(), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("provider failed", result.Message);
@@ -90,7 +90,7 @@ public sealed class AiRequirementsAgentTests
     public async Task ExecuteAsync_AlreadyCanceledTokenThrows()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", CancellationToken.None);
+        await workspace.WriteCopiedIdeaAsync("# Redis TTL Audit Tool", TestContext.Current.CancellationToken);
         var agent = new AiRequirementsAgent(new RecordingAiProvider(), new InMemoryRunLogger());
         using var source = new CancellationTokenSource();
         await source.CancelAsync();

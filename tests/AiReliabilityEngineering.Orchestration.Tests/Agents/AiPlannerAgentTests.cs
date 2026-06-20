@@ -15,11 +15,11 @@ public sealed class AiPlannerAgentTests
     public async Task ExecuteAsync_CallsProviderWithJsonRequestAndSpecificationContent()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var provider = new RecordingAiProvider(ValidPlanningJson);
         var agent = new AiPlannerAgent(provider, new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.True(provider.WasCalled);
@@ -32,10 +32,10 @@ public sealed class AiPlannerAgentTests
     public async Task ExecuteAsync_WritesTasksJson()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiPlannerAgent(new RecordingAiProvider(ValidPlanningJson), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "tasks.json")));
@@ -46,10 +46,10 @@ public sealed class AiPlannerAgentTests
     public async Task ExecuteAsync_ProviderFailureReturnsAgentFailure()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiPlannerAgent(new FailingAiProvider(), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("provider failed", result.Message);
@@ -59,10 +59,10 @@ public sealed class AiPlannerAgentTests
     public async Task ExecuteAsync_InvalidJsonProviderResponseReturnsFailure()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiPlannerAgent(new RecordingAiProvider("not json"), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Planning response JSON is invalid", result.Message);
@@ -74,7 +74,7 @@ public sealed class AiPlannerAgentTests
         using var workspace = TestRunWorkspace.Create();
         var agent = new AiPlannerAgent(new RecordingAiProvider(ValidPlanningJson), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Project specification artifact was not found", result.Message);
@@ -84,14 +84,14 @@ public sealed class AiPlannerAgentTests
     public async Task ExecuteAsync_WithFakeProviderGeneratesDeterministicTasks()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiPlannerAgent(new FakeAiProvider(), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         await using var stream = File.OpenRead(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "tasks.json"));
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal("T001", document.RootElement.GetProperty("tasks")[0].GetProperty("id").GetString());
     }
 
@@ -99,7 +99,7 @@ public sealed class AiPlannerAgentTests
     public async Task ExecuteAsync_AlreadyCanceledTokenThrows()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiPlannerAgent(new RecordingAiProvider(ValidPlanningJson), new InMemoryRunLogger());
         using var source = new CancellationTokenSource();
         await source.CancelAsync();

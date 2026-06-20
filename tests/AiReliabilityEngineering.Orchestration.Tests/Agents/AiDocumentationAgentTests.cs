@@ -14,7 +14,7 @@ public sealed class AiDocumentationAgentTests
     public async Task ExecuteAsync_CallsProviderWithSpecificationContent()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var provider = new RecordingAiProvider("""
             ---README---
             # Test README
@@ -28,7 +28,7 @@ public sealed class AiDocumentationAgentTests
             """);
         var agent = new AiDocumentationAgent(provider, new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.True(provider.WasCalled);
@@ -40,7 +40,7 @@ public sealed class AiDocumentationAgentTests
     public async Task ExecuteAsync_WritesReadmeAndPlanArtifacts()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiDocumentationAgent(new RecordingAiProvider("""
             ---README---
             # Test README
@@ -49,7 +49,7 @@ public sealed class AiDocumentationAgentTests
             # Test PLAN
             """), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "README.md")));
@@ -62,10 +62,10 @@ public sealed class AiDocumentationAgentTests
     public async Task ExecuteAsync_ProviderFailureReturnsAgentFailure()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiDocumentationAgent(new FailingAiProvider(), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("provider failed", result.Message);
@@ -77,7 +77,7 @@ public sealed class AiDocumentationAgentTests
         using var workspace = TestRunWorkspace.Create();
         var agent = new AiDocumentationAgent(new RecordingAiProvider("unused"), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Project specification artifact was not found", result.Message);
@@ -87,10 +87,10 @@ public sealed class AiDocumentationAgentTests
     public async Task ExecuteAsync_InvalidProviderResponseWithoutMarkersReturnsFailure()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiDocumentationAgent(new RecordingAiProvider("plain markdown"), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("required README and PLAN markers", result.Message);
@@ -100,14 +100,18 @@ public sealed class AiDocumentationAgentTests
     public async Task ExecuteAsync_WithFakeProviderGeneratesDeterministicDocumentation()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiDocumentationAgent(new FakeAiProvider(), new InMemoryRunLogger());
 
-        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), CancellationToken.None);
+        var result = await agent.ExecuteAsync(workspace.CreateAgentContext(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
-        var readme = await File.ReadAllTextAsync(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "README.md"));
-        var plan = await File.ReadAllTextAsync(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "PLAN.md"));
+        var readme = await File.ReadAllTextAsync(
+            Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "README.md"),
+            TestContext.Current.CancellationToken);
+        var plan = await File.ReadAllTextAsync(
+            Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "PLAN.md"),
+            TestContext.Current.CancellationToken);
         Assert.Contains("# Redis TTL Audit Tool", readme);
         Assert.Contains("# Plan: Redis TTL Audit Tool", plan);
     }
@@ -116,7 +120,7 @@ public sealed class AiDocumentationAgentTests
     public async Task ExecuteAsync_AlreadyCanceledTokenThrows()
     {
         using var workspace = TestRunWorkspace.Create();
-        await workspace.WriteSpecificationAsync(CancellationToken.None);
+        await workspace.WriteSpecificationAsync(TestContext.Current.CancellationToken);
         var agent = new AiDocumentationAgent(new RecordingAiProvider("unused"), new InMemoryRunLogger());
         using var source = new CancellationTokenSource();
         await source.CancelAsync();

@@ -1,4 +1,5 @@
 using AiReliabilityEngineering.Core.Ai;
+using AiReliabilityEngineering.Core.Tools;
 using AiReliabilityEngineering.Core.Workflow;
 using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Infrastructure.Logging;
@@ -16,7 +17,7 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithValidIdeaFile_CreatesRunDirectory()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.True(Directory.Exists(result.RunDirectory));
     }
@@ -25,7 +26,7 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithValidIdeaFile_CopiesInputFileToInputIdeaMd()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "input", "idea.md")));
     }
@@ -34,21 +35,21 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithValidIdeaFile_WritesRunStateJson()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), TestContext.Current.CancellationToken);
 
         var statePath = Path.Combine(result.RunDirectory!, "run-state.json");
         Assert.True(File.Exists(statePath));
-        Assert.Contains("\"status\": \"Completed\"", await File.ReadAllTextAsync(statePath, CancellationToken.None));
+        Assert.Contains("\"status\": \"Completed\"", await File.ReadAllTextAsync(statePath, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task RunAsync_WithValidIdeaFile_WritesCompletedStateWithSixSuccessfulSteps()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), TestContext.Current.CancellationToken);
         var statePath = Path.Combine(result.RunDirectory!, "run-state.json");
         await using var stream = File.OpenRead(statePath);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         var root = document.RootElement;
 
         Assert.Equal("Completed", root.GetProperty("status").GetString());
@@ -67,7 +68,7 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithValidIdeaFile_ExecutesAllFakeAgentsAndCreatesArtifacts()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), TestContext.Current.CancellationToken);
         var root = result.RunDirectory!;
 
         string[] expectedFiles =
@@ -95,18 +96,18 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithValidIdeaFile_WritesLogs()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), TestContext.Current.CancellationToken);
 
         var logPath = Path.Combine(result.RunDirectory!, "logs", "orchestrator.log");
         Assert.True(File.Exists(logPath));
-        Assert.Contains("RunCompleted", await File.ReadAllTextAsync(logPath, CancellationToken.None));
+        Assert.Contains("RunCompleted", await File.ReadAllTextAsync(logPath, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task RunAsync_WithValidIdeaFile_ReturnsSuccess()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Contains("Completed", result.Message);
@@ -116,14 +117,14 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithAiRequirementsProfile_CompletesAndWritesRequirementsArtifacts()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiRequirements), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiRequirements), TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "requirements.md")));
         var specificationPath = Path.Combine(result.RunDirectory!, "artifacts", "specification.json");
         Assert.True(File.Exists(specificationPath));
         await using var stream = File.OpenRead(specificationPath);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(document.RootElement.TryGetProperty("projectName", out _));
     }
 
@@ -131,11 +132,11 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithAiRequirementsProfile_RecordsAiRequirementsAgent()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiRequirements), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiRequirements), TestContext.Current.CancellationToken);
 
         var statePath = Path.Combine(result.RunDirectory!, "run-state.json");
         await using var stream = File.OpenRead(statePath);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         var firstStep = document.RootElement.GetProperty("steps")[0];
 
         Assert.Equal("Requirements", firstStep.GetProperty("step").GetString());
@@ -147,7 +148,7 @@ public sealed class AireOrchestratorTests
     public async Task RunAsync_WithAiDemoProfile_CompletesAndWritesAiArtifacts()
     {
         using var test = TestWorkspace.Create();
-        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiDemo), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiDemo), TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Contains("Completed", result.Message);
@@ -158,16 +159,58 @@ public sealed class AireOrchestratorTests
         Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "tasks.json")));
 
         await using var tasksStream = File.OpenRead(Path.Combine(result.RunDirectory!, "artifacts", "tasks.json"));
-        using var tasksDocument = await JsonDocument.ParseAsync(tasksStream, cancellationToken: CancellationToken.None);
+        using var tasksDocument = await JsonDocument.ParseAsync(tasksStream, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(tasksDocument.RootElement.TryGetProperty("tasks", out _));
 
         await using var stateStream = File.OpenRead(Path.Combine(result.RunDirectory!, "run-state.json"));
-        using var stateDocument = await JsonDocument.ParseAsync(stateStream, cancellationToken: CancellationToken.None);
+        using var stateDocument = await JsonDocument.ParseAsync(stateStream, cancellationToken: TestContext.Current.CancellationToken);
         var steps = stateDocument.RootElement.GetProperty("steps");
         Assert.Equal("Completed", stateDocument.RootElement.GetProperty("status").GetString());
         Assert.Equal("AiRequirementsAgent", steps[0].GetProperty("agentName").GetString());
         Assert.Equal("AiDocumentationAgent", steps[1].GetProperty("agentName").GetString());
         Assert.Equal("AiPlannerAgent", steps[2].GetProperty("agentName").GetString());
+    }
+
+    [Fact]
+    public async Task RunAsync_WithAiDemoDotnetProfile_CompletesAndWritesWorkspaceAndReports()
+    {
+        using var test = TestWorkspace.Create();
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiDemoDotnet), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Contains("Completed", result.Message);
+
+        string[] expectedFiles =
+        [
+            "artifacts/specification.json",
+            "artifacts/requirements.md",
+            "artifacts/README.md",
+            "artifacts/PLAN.md",
+            "artifacts/tasks.json",
+            "workspace/Directory.Packages.props",
+            "workspace/GeneratedTool.slnx",
+            "workspace/src/GeneratedTool.Cli/GeneratedTool.Cli.csproj",
+            "workspace/src/GeneratedTool.Cli/Program.cs",
+            "workspace/tests/GeneratedTool.Cli.Tests/GeneratedTool.Cli.Tests.csproj",
+            "workspace/tests/GeneratedTool.Cli.Tests/SmokeTests.cs",
+            "reports/build.md",
+            "reports/tests.md"
+        ];
+
+        foreach (var expectedFile in expectedFiles)
+        {
+            Assert.True(File.Exists(Path.Combine(result.RunDirectory!, expectedFile)), expectedFile);
+        }
+
+        await using var stateStream = File.OpenRead(Path.Combine(result.RunDirectory!, "run-state.json"));
+        using var stateDocument = await JsonDocument.ParseAsync(stateStream, cancellationToken: TestContext.Current.CancellationToken);
+        var steps = stateDocument.RootElement.GetProperty("steps");
+        Assert.Equal("Completed", stateDocument.RootElement.GetProperty("status").GetString());
+        Assert.Equal("AiRequirementsAgent", steps[0].GetProperty("agentName").GetString());
+        Assert.Equal("AiDocumentationAgent", steps[1].GetProperty("agentName").GetString());
+        Assert.Equal("AiPlannerAgent", steps[2].GetProperty("agentName").GetString());
+        Assert.Equal("TemplateCodeAgent", steps[3].GetProperty("agentName").GetString());
+        Assert.Equal("BuildTestAgent", steps[4].GetProperty("agentName").GetString());
     }
 
     [Fact]
@@ -179,7 +222,7 @@ public sealed class AireOrchestratorTests
 
         var result = await test.Orchestrator.RunAsync(
             test.CreateRequest(WorkflowProfile.AiRequirements, expectedSelection),
-            CancellationToken.None);
+            TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Same(expectedSelection, receivedSelection);
@@ -190,7 +233,7 @@ public sealed class AireOrchestratorTests
     {
         using var test = TestWorkspace.Create();
 
-        var result = await test.Orchestrator.RunAsync(new RunRequest(Path.Combine(test.RootDirectory, "missing.md"), test.RunsDirectory), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(new RunRequest(Path.Combine(test.RootDirectory, "missing.md"), test.RunsDirectory), TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Null(result.RunId);
@@ -202,7 +245,7 @@ public sealed class AireOrchestratorTests
     {
         using var test = TestWorkspace.Create();
 
-        var result = await test.Orchestrator.RunAsync(new RunRequest(test.IdeaFilePath, " "), CancellationToken.None);
+        var result = await test.Orchestrator.RunAsync(new RunRequest(test.IdeaFilePath, " "), TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Null(result.RunId);
@@ -226,7 +269,7 @@ public sealed class AireOrchestratorTests
                 {
                     onProviderSelection?.Invoke(selection);
                     return new FakeAiProvider();
-                }));
+                }, () => new SuccessfulToolExecutor()));
         }
 
         public string RootDirectory { get; }
@@ -255,6 +298,18 @@ public sealed class AireOrchestratorTests
             {
                 Directory.Delete(RootDirectory, recursive: true);
             }
+        }
+    }
+
+    private sealed class SuccessfulToolExecutor : IToolExecutor
+    {
+        public Task<ToolExecutionResult> ExecuteAsync(
+            ToolExecutionRequest request,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var now = DateTimeOffset.UtcNow;
+            return Task.FromResult(new ToolExecutionResult(0, "ok", string.Empty, now, now));
         }
     }
 }

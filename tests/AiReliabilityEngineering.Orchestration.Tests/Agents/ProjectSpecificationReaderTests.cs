@@ -11,10 +11,10 @@ public sealed class ProjectSpecificationReaderTests
     public async Task ReadAsync_ReadsValidSpecificationJson()
     {
         using var workspace = TestRunWorkspace.Create();
-        await WriteSpecificationAsync(workspace.RunContext, CreateSpecification(), CancellationToken.None);
+        await WriteSpecificationAsync(workspace.RunContext, CreateSpecification(), TestContext.Current.CancellationToken);
         var reader = new ProjectSpecificationReader();
 
-        var specification = await reader.ReadAsync(workspace.RunContext, CancellationToken.None);
+        var specification = await reader.ReadAsync(workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.Equal("Redis TTL Audit Tool", specification.ProjectName);
         Assert.Equal("Scan Redis keys.", specification.Summary);
@@ -28,7 +28,7 @@ public sealed class ProjectSpecificationReaderTests
         var reader = new ProjectSpecificationReader();
 
         await Assert.ThrowsAsync<FileNotFoundException>(() =>
-            reader.ReadAsync(workspace.RunContext, CancellationToken.None));
+            reader.ReadAsync(workspace.RunContext, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -38,11 +38,12 @@ public sealed class ProjectSpecificationReaderTests
         Directory.CreateDirectory(workspace.RunContext.Paths.ArtifactsDirectory);
         await File.WriteAllTextAsync(
             Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "specification.json"),
-            "not json");
+            "not json",
+            TestContext.Current.CancellationToken);
         var reader = new ProjectSpecificationReader();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            reader.ReadAsync(workspace.RunContext, CancellationToken.None));
+            reader.ReadAsync(workspace.RunContext, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -52,25 +53,27 @@ public sealed class ProjectSpecificationReaderTests
         Directory.CreateDirectory(workspace.RunContext.Paths.ArtifactsDirectory);
         await File.WriteAllTextAsync(
             Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "specification.json"),
-            """{ "projectName": "", "summary": "Summary" }""");
+            """{ "projectName": "", "summary": "Summary" }""",
+            TestContext.Current.CancellationToken);
         var reader = new ProjectSpecificationReader();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            reader.ReadAsync(workspace.RunContext, CancellationToken.None));
+            reader.ReadAsync(workspace.RunContext, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task ReadAsync_ReadsFromArtifactsDirectory()
     {
         using var workspace = TestRunWorkspace.Create();
-        await WriteSpecificationAsync(workspace.RunContext, CreateSpecification(), CancellationToken.None);
+        await WriteSpecificationAsync(workspace.RunContext, CreateSpecification(), TestContext.Current.CancellationToken);
         Directory.CreateDirectory(workspace.RunContext.Paths.WorkspaceDirectory);
         await File.WriteAllTextAsync(
             Path.Combine(workspace.RunContext.Paths.WorkspaceDirectory, "specification.json"),
-            """{ "projectName": "Wrong" }""");
+            """{ "projectName": "Wrong" }""",
+            TestContext.Current.CancellationToken);
         var reader = new ProjectSpecificationReader();
 
-        var specification = await reader.ReadAsync(workspace.RunContext, CancellationToken.None);
+        var specification = await reader.ReadAsync(workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.Equal("Redis TTL Audit Tool", specification.ProjectName);
     }

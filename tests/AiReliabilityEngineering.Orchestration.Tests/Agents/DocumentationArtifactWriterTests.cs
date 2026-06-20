@@ -13,7 +13,7 @@ public sealed class DocumentationArtifactWriterTests
         var writer = new DocumentationArtifactWriter();
         var documentation = new ProjectDocumentation("# README", "# PLAN");
 
-        var artifacts = await writer.WriteAsync(documentation, workspace.RunContext, CancellationToken.None);
+        var artifacts = await writer.WriteAsync(documentation, workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "README.md")));
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "PLAN.md")));
@@ -28,14 +28,18 @@ public sealed class DocumentationArtifactWriterTests
         var writer = new DocumentationArtifactWriter();
         var documentation = new ProjectDocumentation("# README\n\nContent", "# PLAN\n\nContent");
 
-        await writer.WriteAsync(documentation, workspace.RunContext, CancellationToken.None);
+        await writer.WriteAsync(documentation, workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.Equal(
             documentation.ReadmeMarkdown,
-            await File.ReadAllTextAsync(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "README.md")));
+            await File.ReadAllTextAsync(
+                Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "README.md"),
+                TestContext.Current.CancellationToken));
         Assert.Equal(
             documentation.PlanMarkdown,
-            await File.ReadAllTextAsync(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "PLAN.md")));
+            await File.ReadAllTextAsync(
+                Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "PLAN.md"),
+                TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -44,7 +48,7 @@ public sealed class DocumentationArtifactWriterTests
         using var workspace = TestRunWorkspace.Create();
         var writer = new DocumentationArtifactWriter();
 
-        await writer.WriteAsync(new ProjectDocumentation("# README", "# PLAN"), workspace.RunContext, CancellationToken.None);
+        await writer.WriteAsync(new ProjectDocumentation("# README", "# PLAN"), workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.False(File.Exists(Path.Combine(workspace.RunContext.Paths.RootDirectory, "README.md")));
         Assert.False(File.Exists(Path.Combine(workspace.RunContext.Paths.RootDirectory, "PLAN.md")));

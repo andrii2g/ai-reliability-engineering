@@ -13,7 +13,7 @@ public sealed class PlannerArtifactWriterTests
         using var workspace = TestRunWorkspace.Create();
         var writer = new PlannerArtifactWriter();
 
-        var artifacts = await writer.WriteAsync(CreatePlan(), workspace.RunContext, CancellationToken.None);
+        var artifacts = await writer.WriteAsync(CreatePlan(), workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "tasks.json")));
         Assert.Contains(artifacts, artifact => artifact.RelativePath == "artifacts/tasks.json");
@@ -25,10 +25,10 @@ public sealed class PlannerArtifactWriterTests
         using var workspace = TestRunWorkspace.Create();
         var writer = new PlannerArtifactWriter();
 
-        await writer.WriteAsync(CreatePlan(), workspace.RunContext, CancellationToken.None);
+        await writer.WriteAsync(CreatePlan(), workspace.RunContext, TestContext.Current.CancellationToken);
 
         await using var stream = File.OpenRead(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "tasks.json"));
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         var task = document.RootElement.GetProperty("tasks")[0];
         Assert.Equal("T001", task.GetProperty("id").GetString());
         Assert.Equal("Create skeleton", task.GetProperty("title").GetString());
@@ -42,7 +42,7 @@ public sealed class PlannerArtifactWriterTests
         using var workspace = TestRunWorkspace.Create();
         var writer = new PlannerArtifactWriter();
 
-        await writer.WriteAsync(CreatePlan(), workspace.RunContext, CancellationToken.None);
+        await writer.WriteAsync(CreatePlan(), workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.False(File.Exists(Path.Combine(workspace.RunContext.Paths.RootDirectory, "tasks.json")));
     }

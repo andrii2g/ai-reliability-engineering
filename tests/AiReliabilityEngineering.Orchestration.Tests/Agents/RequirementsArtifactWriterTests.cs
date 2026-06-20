@@ -13,7 +13,7 @@ public sealed class RequirementsArtifactWriterTests
         using var workspace = TestRunWorkspace.Create();
         var writer = new RequirementsArtifactWriter();
 
-        var artifacts = await writer.WriteAsync(CreateSpecification(), workspace.RunContext, CancellationToken.None);
+        var artifacts = await writer.WriteAsync(CreateSpecification(), workspace.RunContext, TestContext.Current.CancellationToken);
 
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "specification.json")));
         Assert.True(File.Exists(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "requirements.md")));
@@ -27,10 +27,10 @@ public sealed class RequirementsArtifactWriterTests
         using var workspace = TestRunWorkspace.Create();
         var writer = new RequirementsArtifactWriter();
 
-        await writer.WriteAsync(CreateSpecification(), workspace.RunContext, CancellationToken.None);
+        await writer.WriteAsync(CreateSpecification(), workspace.RunContext, TestContext.Current.CancellationToken);
 
         await using var stream = File.OpenRead(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "specification.json"));
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(document.RootElement.TryGetProperty("projectName", out _));
         Assert.True(document.RootElement.TryGetProperty("summary", out _));
         Assert.True(document.RootElement.TryGetProperty("goals", out _));
@@ -43,9 +43,9 @@ public sealed class RequirementsArtifactWriterTests
         using var workspace = TestRunWorkspace.Create();
         var writer = new RequirementsArtifactWriter();
 
-        await writer.WriteAsync(CreateSpecification(), workspace.RunContext, CancellationToken.None);
+        await writer.WriteAsync(CreateSpecification(), workspace.RunContext, TestContext.Current.CancellationToken);
 
-        var content = await File.ReadAllTextAsync(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "requirements.md"), CancellationToken.None);
+        var content = await File.ReadAllTextAsync(Path.Combine(workspace.RunContext.Paths.ArtifactsDirectory, "requirements.md"), TestContext.Current.CancellationToken);
         Assert.Contains("# Requirements", content);
         Assert.Contains("## Project Name", content);
         Assert.Contains("## Summary", content);

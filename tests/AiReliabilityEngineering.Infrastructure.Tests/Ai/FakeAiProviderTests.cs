@@ -16,8 +16,8 @@ public sealed class FakeAiProviderTests
             AiOutputFormat.Text,
             AiProviderOptions.DefaultFake);
 
-        var first = await provider.GenerateAsync(request, CancellationToken.None);
-        var second = await provider.GenerateAsync(request, CancellationToken.None);
+        var first = await provider.GenerateAsync(request, TestContext.Current.CancellationToken);
+        var second = await provider.GenerateAsync(request, TestContext.Current.CancellationToken);
 
         Assert.True(first.Succeeded);
         Assert.True(second.Succeeded);
@@ -38,7 +38,7 @@ public sealed class FakeAiProviderTests
             AiOutputFormat.Json,
             AiProviderOptions.DefaultFake);
 
-        var response = await provider.GenerateAsync(request, CancellationToken.None);
+        var response = await provider.GenerateAsync(request, TestContext.Current.CancellationToken);
 
         Assert.True(response.Succeeded);
         using var document = JsonDocument.Parse(response.Content);
@@ -68,6 +68,6 @@ public sealed class FakeAiProviderTests
         var provider = new FakeAiProvider();
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            provider.GenerateAsync(null!, CancellationToken.None));
+            provider.GenerateAsync(null!, TestContext.Current.CancellationToken));
     }
 }

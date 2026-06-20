@@ -10,11 +10,11 @@ public sealed class RunCleanupServiceTests
         using var workspace = CleanupWorkspace.Create();
         var runDirectory = Path.Combine(workspace.RunsDirectory, "20260618-101530-abc12345");
         Directory.CreateDirectory(runDirectory);
-        await File.WriteAllTextAsync(Path.Combine(runDirectory, "run-state.json"), "{}");
-        await File.WriteAllTextAsync(Path.Combine(workspace.RunsDirectory, "orphan.tmp"), "delete me");
+        await File.WriteAllTextAsync(Path.Combine(runDirectory, "run-state.json"), "{}", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(workspace.RunsDirectory, "orphan.tmp"), "delete me", TestContext.Current.CancellationToken);
         var service = new RunCleanupService();
 
-        var result = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
+        var result = await service.CleanupAsync(workspace.RunsDirectory, TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal(2, result.DeletedEntries);
@@ -31,7 +31,7 @@ public sealed class RunCleanupServiceTests
         File.Delete(gitkeepPath);
         var service = new RunCleanupService();
 
-        var result = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
+        var result = await service.CleanupAsync(workspace.RunsDirectory, TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.True(Directory.Exists(workspace.RunsDirectory));
@@ -44,7 +44,7 @@ public sealed class RunCleanupServiceTests
         using var workspace = CleanupWorkspace.Create(createRunsDirectory: false);
         var service = new RunCleanupService();
 
-        var result = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
+        var result = await service.CleanupAsync(workspace.RunsDirectory, TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal(0, result.DeletedEntries);
@@ -57,11 +57,11 @@ public sealed class RunCleanupServiceTests
     {
         using var workspace = CleanupWorkspace.Create();
         var outsideFilePath = Path.Combine(workspace.RootDirectory, "outside.txt");
-        await File.WriteAllTextAsync(outsideFilePath, "keep me");
+        await File.WriteAllTextAsync(outsideFilePath, "keep me", TestContext.Current.CancellationToken);
         Directory.CreateDirectory(Path.Combine(workspace.RunsDirectory, "run-to-delete"));
         var service = new RunCleanupService();
 
-        var result = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
+        var result = await service.CleanupAsync(workspace.RunsDirectory, TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.True(File.Exists(outsideFilePath));
@@ -74,8 +74,8 @@ public sealed class RunCleanupServiceTests
         Directory.CreateDirectory(Path.Combine(workspace.RunsDirectory, "run-to-delete"));
         var service = new RunCleanupService();
 
-        var firstResult = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
-        var secondResult = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
+        var firstResult = await service.CleanupAsync(workspace.RunsDirectory, TestContext.Current.CancellationToken);
+        var secondResult = await service.CleanupAsync(workspace.RunsDirectory, TestContext.Current.CancellationToken);
 
         Assert.True(firstResult.Succeeded);
         Assert.True(secondResult.Succeeded);

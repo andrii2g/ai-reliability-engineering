@@ -25,7 +25,7 @@ public sealed class AgentPipelineTests
             logger);
         var initialState = new RunState(workspace.RunContext.Id.Value, RunStatus.Running, workspace.RunContext.CreatedAtUtc, workspace.RunContext.CreatedAtUtc, [], null);
 
-        var result = await pipeline.ExecuteAsync(workspace.RunContext, initialState, CancellationToken.None);
+        var result = await pipeline.ExecuteAsync(workspace.RunContext, initialState, TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(RunStatus.Failed, result.FinalState.Status);

@@ -14,7 +14,7 @@ public sealed class OpenAiProviderTests
         var handler = new RecordingHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         var provider = CreateProvider(handler, _ => null);
 
-        var response = await provider.GenerateAsync(CreateRequest(), CancellationToken.None);
+        var response = await provider.GenerateAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.False(response.Succeeded);
         Assert.Contains("OPENAI_API_KEY environment variable is not set", response.ErrorMessage);
@@ -34,7 +34,7 @@ public sealed class OpenAiProviderTests
             """));
         var provider = CreateProvider(handler);
 
-        var response = await provider.GenerateAsync(CreateRequest(), CancellationToken.None);
+        var response = await provider.GenerateAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.True(response.Succeeded);
         Assert.Equal(1, handler.RequestCount);
@@ -70,7 +70,7 @@ public sealed class OpenAiProviderTests
             """));
         var provider = CreateProvider(handler);
 
-        var response = await provider.GenerateAsync(CreateRequest(), CancellationToken.None);
+        var response = await provider.GenerateAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.True(response.Succeeded);
         Assert.Equal("hello from openai", response.Content);
@@ -90,7 +90,7 @@ public sealed class OpenAiProviderTests
             HttpStatusCode.BadRequest));
         var provider = CreateProvider(handler);
 
-        var response = await provider.GenerateAsync(CreateRequest(), CancellationToken.None);
+        var response = await provider.GenerateAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.False(response.Succeeded);
         Assert.Contains("400", response.ErrorMessage);
@@ -104,7 +104,7 @@ public sealed class OpenAiProviderTests
         var handler = new RecordingHttpMessageHandler(_ => TextResponse("not json"));
         var provider = CreateProvider(handler);
 
-        var response = await provider.GenerateAsync(CreateRequest(), CancellationToken.None);
+        var response = await provider.GenerateAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.False(response.Succeeded);
         Assert.Contains("Failed to parse OpenAI response JSON", response.ErrorMessage);
@@ -116,7 +116,7 @@ public sealed class OpenAiProviderTests
         var handler = new RecordingHttpMessageHandler(_ => JsonResponse("{}"));
         var provider = CreateProvider(handler);
 
-        var response = await provider.GenerateAsync(CreateRequest(), CancellationToken.None);
+        var response = await provider.GenerateAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.False(response.Succeeded);
         Assert.Contains("OpenAI response did not contain output text", response.ErrorMessage);
@@ -142,7 +142,7 @@ public sealed class OpenAiProviderTests
         var provider = CreateProvider(handler);
 
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => provider.GenerateAsync(null!, CancellationToken.None));
+            () => provider.GenerateAsync(null!, TestContext.Current.CancellationToken));
     }
 
     private static OpenAiProvider CreateProvider(

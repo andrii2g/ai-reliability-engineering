@@ -1,6 +1,7 @@
 using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Core.Runs;
 using AiReliabilityEngineering.Core.Steps;
+using AiReliabilityEngineering.Core.Tools;
 using AiReliabilityEngineering.Core.Workflow;
 using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Orchestration.Agents;
@@ -66,6 +67,29 @@ public sealed class AgentPipelineFactoryTests
     }
 
     [Fact]
+    public void Create_AiDemoDotnetProfileCreatesAiAgentsThenTemplateAndBuildAgents()
+    {
+        var pipeline = CreateFactory().Create(
+            WorkflowProfile.AiDemoDotnet,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(WorkflowStep.Requirements, pipeline.Steps[0].Step);
+        Assert.IsType<AiRequirementsAgent>(pipeline.Steps[0].Agent);
+        Assert.Equal(WorkflowStep.Documentation, pipeline.Steps[1].Step);
+        Assert.IsType<AiDocumentationAgent>(pipeline.Steps[1].Agent);
+        Assert.Equal(WorkflowStep.Planning, pipeline.Steps[2].Step);
+        Assert.IsType<AiPlannerAgent>(pipeline.Steps[2].Agent);
+        Assert.Equal(WorkflowStep.Code, pipeline.Steps[3].Step);
+        Assert.IsType<TemplateCodeAgent>(pipeline.Steps[3].Agent);
+        Assert.Equal(WorkflowStep.Testing, pipeline.Steps[4].Step);
+        Assert.IsType<BuildTestAgent>(pipeline.Steps[4].Agent);
+        Assert.Equal(WorkflowStep.Review, pipeline.Steps[5].Step);
+        Assert.IsType<FakeReviewerAgent>(pipeline.Steps[5].Agent);
+    }
+
+    [Fact]
     public void Create_BothProfilesKeepSameStepOrder()
     {
         var factory = CreateFactory();
@@ -85,6 +109,11 @@ public sealed class AgentPipelineFactoryTests
             AiProviderSelection.DefaultFake,
             new InMemoryRunLogger(),
             new InMemoryRunStateStore()).Steps.Select(step => step.Step);
+        var aiDemoDotnetSteps = factory.Create(
+            WorkflowProfile.AiDemoDotnet,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore()).Steps.Select(step => step.Step);
 
         WorkflowStep[] expected =
         [
@@ -98,6 +127,7 @@ public sealed class AgentPipelineFactoryTests
         Assert.Equal(expected, fakeSteps);
         Assert.Equal(expected, aiSteps);
         Assert.Equal(expected, aiDemoSteps);
+        Assert.Equal(expected, aiDemoDotnetSteps);
     }
 
     [Fact]
@@ -152,8 +182,29 @@ public sealed class AgentPipelineFactoryTests
         Assert.Equal(1, callCount);
     }
 
+    [Fact]
+    public void Create_AiDemoDotnetProfileCreatesSelectedProviderOnce()
+    {
+        var callCount = 0;
+        var factory = new AgentPipelineFactory(
+            _ =>
+            {
+                callCount++;
+                return new FakeAiProvider();
+            },
+            () => new SuccessfulToolExecutor());
+
+        _ = factory.Create(
+            WorkflowProfile.AiDemoDotnet,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(1, callCount);
+    }
+
     private static AgentPipelineFactory CreateFactory()
-        => new(_ => new FakeAiProvider());
+        => new(_ => new FakeAiProvider(), () => new SuccessfulToolExecutor());
 
     private sealed class InMemoryRunLogger : IRunLogger
     {
@@ -165,5 +216,14 @@ public sealed class AgentPipelineFactoryTests
     private sealed class InMemoryRunStateStore : IRunStateStore
     {
         public Task SaveAsync(RunState state, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class SuccessfulToolExecutor : IToolExecutor
+    {
+        public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken)
+        {
+            var now = DateTimeOffset.UtcNow;
+            return Task.FromResult(new ToolExecutionResult(0, "ok", string.Empty, now, now));
+        }
     }
 }
