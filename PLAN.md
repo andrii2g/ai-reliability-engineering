@@ -1,28 +1,29 @@
-# PLAN.md - AIRE Step 10.7: ArtifactReviewAgent and Final Run Summary
+# PLAN.md - AIRE Step 10.8-10.10: Git Snapshot, Generated Files Report, Code Executor Abstraction, and OpenCode/Codex Integration
 
 ## Purpose
 
-This plan is for Codex to implement the next AIRE milestone: a deterministic final review layer for generated runs.
+This plan is for Codex to implement the next AIRE milestone after the local generated .NET demo and deterministic final review.
 
 AIRE means AI Reliability Engineering.
 
 Repository conventions:
 
-- Repository name: ai-reliability-engineering
-- Solution name: AiReliabilityEngineering.slnx
-- CLI project: AiReliabilityEngineering.Cli
-- CLI command name: aire
-- PRD location: docs/PRD.md
+- Repository name: `ai-reliability-engineering`
+- Solution name: `AiReliabilityEngineering.slnx`
+- CLI project: `AiReliabilityEngineering.Cli`
+- CLI command name: `aire`
+- PRD location: `docs/PRD.md`
 
 Previous steps should already be implemented:
 
 - stable fake workflow;
 - cleanup command;
 - workflow profiles;
-- `fake` profile;
-- `ai-requirements` profile;
-- `ai-demo` profile;
-- `ai-demo-dotnet` profile;
+- `fake`;
+- `ai-requirements`;
+- `ai-demo`;
+- `ai-demo-dotnet`;
+- `ai-demo-dotnet-review`;
 - AI provider contracts;
 - FakeAiProvider;
 - OpenAiProvider;
@@ -31,78 +32,68 @@ Previous steps should already be implemented:
 - AiPlannerAgent;
 - TemplateCodeAgent;
 - BuildTestAgent;
+- ArtifactReviewAgent;
 - generated .NET workspace demo;
 - build/test reports;
+- final-review.md and workspace-summary.md;
 - samples/redis-ttl-audit.md.
 
-The goal of this step is to replace the final fake review in the generated .NET demo workflow with a deterministic review agent that summarizes what AIRE produced and whether the run output looks complete.
+The goal of this plan is to add the final local foundations needed before real external coding agents become useful:
 
-This step must not introduce real AI review yet.
+1. Git workspace snapshot.
+2. Generated files report.
+3. Code executor abstraction.
+4. Fake code executor.
+5. OpenCode executor integration.
+6. Codex executor integration.
+7. New guarded workflow profiles that keep execution inside the run workspace.
+
+This plan intentionally keeps OpenCode/Codex execution optional and disabled unless explicitly selected through a workflow profile.
 
 ---
 
 ## High-Level Goal
 
-Add a new workflow profile:
+Add these new profiles:
 
 ```text
-ai-demo-dotnet-review
+ai-demo-dotnet-review-git
+ai-demo-dotnet-opencode
+ai-demo-dotnet-codex
 ```
 
-Expected pipeline:
+Expected profile behavior:
 
 ```text
-Requirements  -> AiRequirementsAgent
-Documentation -> AiDocumentationAgent
-Planning      -> AiPlannerAgent
-Code          -> TemplateCodeAgent
-Testing       -> BuildTestAgent
-Review        -> ArtifactReviewAgent
+ai-demo-dotnet-review-git
+  Requirements  -> AiRequirementsAgent
+  Documentation -> AiDocumentationAgent
+  Planning      -> AiPlannerAgent
+  Code          -> TemplateCodeAgent
+  Testing       -> BuildTestAgent
+  Review        -> ArtifactReviewAgent
+  Finalize      -> GitWorkspaceSnapshotAgent
+
+ai-demo-dotnet-opencode
+  Requirements  -> AiRequirementsAgent
+  Documentation -> AiDocumentationAgent
+  Planning      -> AiPlannerAgent
+  Code          -> ExternalCodeAgent(OpenCodeExecutor)
+  Testing       -> BuildTestAgent
+  Review        -> ArtifactReviewAgent
+  Finalize      -> GitWorkspaceSnapshotAgent
+
+ai-demo-dotnet-codex
+  Requirements  -> AiRequirementsAgent
+  Documentation -> AiDocumentationAgent
+  Planning      -> AiPlannerAgent
+  Code          -> ExternalCodeAgent(CodexExecutor)
+  Testing       -> BuildTestAgent
+  Review        -> ArtifactReviewAgent
+  Finalize      -> GitWorkspaceSnapshotAgent
 ```
 
-Expected command:
-
-```bash
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
-```
-
-Expected additional review outputs:
-
-```text
-reports/final-review.md
-reports/workspace-summary.md
-```
-
-The profile should complete successfully with `--provider fake`.
-
-With `--provider openai --model <model-name>`, this profile is valid manual usage and earlier AI-aware agents may call OpenAI. The run may still fail through the normal failed-run path if OpenAI output does not match the required documentation markers or planner JSON shape. ArtifactReviewAgent must not compensate for malformed upstream AI output.
-
----
-
-## Why This Step Exists
-
-AIRE can now produce:
-
-```text
-requirements -> docs -> plan -> template code -> build/test reports
-```
-
-The remaining weak point is:
-
-```text
-Review -> FakeReviewerAgent
-```
-
-Before adding Codex/OpenCode or other external code agents, AIRE needs a stable final review layer that answers:
-
-- What was generated?
-- Are all expected artifacts present?
-- Did the workspace project exist?
-- Did build/test reports exist?
-- What should the developer inspect next?
-- Are there warnings or missing files?
-
-This review layer becomes the foundation for future agentic coding workflows.
+Important: `ExternalCodeAgent` must create the deterministic template workspace first, then run the selected external executor against that workspace. This preserves a working baseline before any external coding agent modifies files.
 
 ---
 
@@ -110,177 +101,116 @@ This review layer becomes the foundation for future agentic coding workflows.
 
 Do not implement these in this step:
 
-- AI-powered ReviewerAgent;
-- OpenAI review;
-- Codex executor;
-- OpenCode executor;
-- Git integration;
-- Git diff reports;
-- PR creation;
+- Git commit;
+- Git push;
+- GitHub PR creation;
+- remote repository operations;
 - Docker;
 - Kubernetes;
-- SQLite;
-- dashboard;
-- retry/fix loop;
-- deep compiler output parsing;
-- code quality scoring;
-- security scanning;
-- dependency vulnerability scanning;
-- real source code analysis;
-- LLM-based review comments.
-
-This step is only about deterministic review of generated artifacts and workspace files.
-
----
-
-## Design Decision: Deterministic Review First
-
-ArtifactReviewAgent must not call AI.
-
-It should deterministically inspect the run directory and produce Markdown reports.
-
-Future direction:
-
-```text
-ArtifactReviewAgent -> deterministic baseline
-AiReviewAgent       -> future AI-assisted review
-GitReviewAgent      -> future diff/status-aware review
-```
-
-The deterministic review should be safe, fast, and testable.
+- multi-template selection;
+- real issue tracker integration;
+- persistent queue/worker mode;
+- UI/dashboard;
+- automatic credential handling for OpenCode/Codex;
+- installing OpenCode or Codex;
+- assuming OpenCode/Codex are installed;
+- running OpenCode/Codex by default;
+- allowing arbitrary external commands from user input;
+- executing outside run workspace.
 
 ---
 
-## Design Decision: Add a New Profile Instead of Changing Existing Profiles
+## Important Safety Rules
 
-Do not change existing profiles.
+External code executors are powerful. They may read, write, and run code depending on their own configuration.
 
-Existing profiles must remain:
+AIRE must enforce these rules:
 
-```text
-fake
-ai-requirements
-ai-demo
-ai-demo-dotnet
-```
+1. External executors run only inside `runContext.Paths.WorkspaceDirectory`.
+2. Do not pass repository root as working directory.
+3. Do not pass secrets to executor prompts.
+4. Do not include `OPENAI_API_KEY` or other provider keys in executor prompts.
+5. Do not write executor logs containing secrets.
+6. Use fixed timeouts.
+7. Capture stdout/stderr.
+8. Write code execution reports.
+9. Run BuildTestAgent after external executor.
+10. Use GitWorkspaceSnapshotAgent after review/finalization to summarize changed files.
 
-Add new profile:
+OpenCode/Codex profiles are opt-in only.
 
-```text
-ai-demo-dotnet-review
-```
-
-This allows comparing:
-
-```text
-ai-demo-dotnet        -> fake review
-ai-demo-dotnet-review -> deterministic artifact review
-```
-
-Later, `ai-demo-dotnet-review` may become the preferred demo profile, but do not remove the previous profile in this step.
+Default profile remains `fake`.
 
 ---
 
-## Expected Reports
+## Design Decision: Add Finalize Workflow Step
 
-ArtifactReviewAgent must write:
+Add a new workflow step:
 
 ```text
-reports/final-review.md
-reports/workspace-summary.md
+Finalize
 ```
 
-### final-review.md
+This step is for non-review finalization work such as:
 
-Required sections:
+- Git snapshot reports;
+- generated files reports;
+- future packaging reports;
+- future PR preparation.
 
-```markdown
-# Final Review
+Do not overload the Review step with Git snapshot responsibilities.
 
-## Run Output
+The pipeline should support both old six-step profiles and new seven-step profiles.
 
-## Required Artifacts
-
-## Requirements
-
-## Documentation
-
-## Planning
-
-## Workspace
-
-## Build and Test Reports
-
-## Warnings
-
-## Suggested Next Steps
-```
-
-### workspace-summary.md
-
-Required sections:
-
-```markdown
-# Workspace Summary
-
-## Workspace Root
-
-## Generated Files
-
-## Project Files
-
-## Test Files
-
-## Reports
-```
-
-The workspace summary should include a deterministic file list or tree for generated workspace files.
+Existing profiles do not need to include Finalize.
 
 ---
 
-## Required File Checks
+## Design Decision: Git Snapshot Is Local and Reporting-Only
 
-The review agent should check for these files.
+GitWorkspaceSnapshotAgent should be local-only and safe.
 
-### Required artifact files
+It may initialize Git inside the run workspace if no `.git` directory exists.
 
-```text
-artifacts/specification.json
-artifacts/requirements.md
-artifacts/README.md
-artifacts/PLAN.md
-artifacts/tasks.json
-```
+It must not:
 
-### Required workspace files
+- commit;
+- push;
+- create branches;
+- create pull requests;
+- modify files outside workspace.
 
-```text
-workspace/Directory.Packages.props
-workspace/GeneratedTool.slnx
-workspace/src/GeneratedTool.Cli/GeneratedTool.Cli.csproj
-workspace/src/GeneratedTool.Cli/Program.cs
-workspace/tests/GeneratedTool.Cli.Tests/GeneratedTool.Cli.Tests.csproj
-workspace/tests/GeneratedTool.Cli.Tests/SmokeTests.cs
-```
-
-### Required report files
+Required reports:
 
 ```text
-reports/build.md
-reports/tests.md
+reports/generated-files.md
+reports/generated-files.json
+reports/git-status.md
 ```
 
-The agent should not fail the run just because a required artifact is missing. Instead, it should:
+Optional but useful:
 
-- record missing files as warnings;
-- write the review reports;
-- return success if review reports were written successfully.
+```text
+reports/git-diff-summary.md
+```
 
-Reason:
+Do not require a commit in this step.
 
-The review agent is diagnostic. Earlier pipeline steps should already fail when critical generation/build/test steps fail.
+---
 
-However, if the review agent cannot write reports, it should return AgentResult.Failure.
+## Design Decision: ExternalCodeAgent Uses Baseline Template First
+
+ExternalCodeAgent must:
+
+1. Create the deterministic .NET template project using the same DotnetTemplateProjectWriter/TemplateCodeAgent path.
+2. Build a coding task prompt from artifacts/tasks.json, artifacts/README.md, and artifacts/PLAN.md.
+3. Run selected ICodeExecutor inside workspace.
+4. Write reports/code-execution.md.
+5. Return success if executor exits successfully.
+
+BuildTestAgent remains responsible for validation after code execution.
+
+This keeps OpenCode/Codex integration behind a stable baseline.
 
 ---
 
@@ -291,229 +221,357 @@ Add or update this structure:
 ```text
 src/
 |-- AiReliabilityEngineering.Core/
-|   `-- Review/
-|       |-- RequiredArtifactCheck.cs
-|       |-- ArtifactReviewResult.cs
-|       `-- WorkspaceSummary.cs
+|   |-- Git/
+|   |   |-- GeneratedFileEntry.cs
+|   |   |-- GeneratedFilesReport.cs
+|   |   |-- GitStatusEntry.cs
+|   |   `-- GitWorkspaceSnapshot.cs
+|   |
+|   |-- CodeExecution/
+|   |   |-- CodeExecutorKind.cs
+|   |   |-- CodeExecutionRequest.cs
+|   |   |-- CodeExecutionResult.cs
+|   |   |-- ICodeExecutor.cs
+|   |   `-- CodeExecutorSelection.cs
+|   |
+|   `-- Workflow/
+|       |-- WorkflowProfile.cs
+|       `-- WorkflowProfileParser.cs
 |
 |-- AiReliabilityEngineering.Orchestration/
-|   `-- Agents/
-|       |-- ArtifactReviewAgent.cs
-|       |-- RequiredArtifactChecker.cs
-|       |-- WorkspaceSummaryBuilder.cs
-|       `-- ReviewReportWriter.cs
+|   |-- Agents/
+|   |   |-- GitWorkspaceSnapshotAgent.cs
+|   |   |-- GeneratedFilesReporter.cs
+|   |   |-- GitStatusParser.cs
+|   |   |-- GitSnapshotReportWriter.cs
+|   |   |-- ExternalCodeAgent.cs
+|   |   |-- CodeExecutionPromptBuilder.cs
+|   |   `-- CodeExecutionReportWriter.cs
+|   |
+|   `-- Pipeline/
+|       `-- AgentPipelineFactory.cs
+|
+|-- AiReliabilityEngineering.Infrastructure/
+|   |-- Git/
+|   |   `-- GitCommandRunner.cs
+|   |
+|   `-- CodeExecution/
+|       |-- FakeCodeExecutor.cs
+|       |-- OpenCodeExecutor.cs
+|       `-- CodexExecutor.cs
 |
 |-- tests/
 |   |-- AiReliabilityEngineering.Core.Tests/
-|   |   `-- Review/
-|   |       |-- RequiredArtifactCheckTests.cs
-|   |       |-- ArtifactReviewResultTests.cs
-|   |       `-- WorkspaceSummaryTests.cs
-|   |
-|   `-- AiReliabilityEngineering.Orchestration.Tests/
-|       `-- Agents/
-|           |-- ArtifactReviewAgentTests.cs
-|           |-- RequiredArtifactCheckerTests.cs
-|           |-- WorkspaceSummaryBuilderTests.cs
-|           `-- ReviewReportWriterTests.cs
+|   |-- AiReliabilityEngineering.Orchestration.Tests/
+|   `-- AiReliabilityEngineering.Infrastructure.Tests/
 |
 `-- docs/
-    |-- artifact-review-agent.md
-    `-- demo-final-review.md
+    |-- git-workspace-snapshot.md
+    |-- generated-files-report.md
+    |-- code-executor-abstraction.md
+    |-- opencode-codex-integration.md
+    `-- demo-external-code-executors.md
 ```
 
-If the repository already uses a different folder layout, follow the existing style, but keep the same logical coverage.
+Follow existing folder conventions if they differ.
 
 ---
 
-# Required Core Models
+# Required Core Changes
 
-## 1. RequiredArtifactCheck
+## 1. Extend WorkflowStep
+
+Find the current `WorkflowStep` enum.
+
+Add:
+
+```csharp
+Finalize
+```
+
+Expected step order:
+
+```text
+Requirements
+Documentation
+Planning
+Code
+Testing
+Review
+Finalize
+```
+
+Rules:
+
+- Existing six-step profiles continue working.
+- Run state serialization must still work.
+- If RunStatus has per-step completed states, add `FinalizationCompleted` or equivalent.
+- If RunStatus does not require per-step states, just record the step result.
+
+---
+
+## 2. Extend WorkflowProfile
+
+Add:
+
+```csharp
+AiDemoDotnetReviewGit
+AiDemoDotnetOpenCode
+AiDemoDotnetCodex
+```
+
+CLI names:
+
+```text
+ai-demo-dotnet-review-git
+ai-demo-dotnet-opencode
+ai-demo-dotnet-codex
+```
+
+Update WorkflowProfileParser:
+
+- parse all new names;
+- include them in SupportedCliNames;
+- ToCliName maps them correctly;
+- missing profile still maps to Fake;
+- unknown profile still fails.
+
+---
+
+## 3. Add Git Core Models
 
 Create:
 
 ```text
-src/AiReliabilityEngineering.Core/Review/RequiredArtifactCheck.cs
+src/AiReliabilityEngineering.Core/Git/GeneratedFileEntry.cs
+src/AiReliabilityEngineering.Core/Git/GeneratedFilesReport.cs
+src/AiReliabilityEngineering.Core/Git/GitStatusEntry.cs
+src/AiReliabilityEngineering.Core/Git/GitWorkspaceSnapshot.cs
 ```
 
-Namespace:
+### GeneratedFileEntry
+
+Suggested shape:
 
 ```csharp
-namespace AiReliabilityEngineering.Core.Review;
-```
-
-Purpose:
-
-- represent whether one expected file exists.
-
-Suggested implementation:
-
-```csharp
-namespace AiReliabilityEngineering.Core.Review;
-
-public sealed record RequiredArtifactCheck
+public sealed record GeneratedFileEntry
 {
-    public RequiredArtifactCheck(
-        string relativePath,
-        bool exists,
-        string category)
+    public GeneratedFileEntry(string relativePath, long sizeBytes)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
         {
             throw new ArgumentException("Relative path is required.", nameof(relativePath));
         }
 
-        if (string.IsNullOrWhiteSpace(category))
+        if (sizeBytes < 0)
         {
-            throw new ArgumentException("Category is required.", nameof(category));
+            throw new ArgumentOutOfRangeException(nameof(sizeBytes));
         }
 
-        RelativePath = relativePath.Replace('\\', '/');
-        Exists = exists;
-        Category = category;
+        RelativePath = relativePath.Replace('\\\\', '/');
+        SizeBytes = sizeBytes;
     }
 
     public string RelativePath { get; }
 
-    public bool Exists { get; }
-
-    public string Category { get; }
+    public long SizeBytes { get; }
 }
 ```
 
-Categories should be stable strings:
+### GeneratedFilesReport
 
-```text
-artifact
-workspace
-report
+```csharp
+public sealed record GeneratedFilesReport
+{
+    public GeneratedFilesReport(IReadOnlyList<GeneratedFileEntry> files)
+    {
+        Files = (files ?? throw new ArgumentNullException(nameof(files)))
+            .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    public IReadOnlyList<GeneratedFileEntry> Files { get; }
+
+    public int Count => Files.Count;
+
+    public long TotalSizeBytes => Files.Sum(file => file.SizeBytes);
+}
+```
+
+### GitStatusEntry
+
+```csharp
+public sealed record GitStatusEntry
+{
+    public GitStatusEntry(string status, string path)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            throw new ArgumentException("Git status is required.", nameof(status));
+        }
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Git path is required.", nameof(path));
+        }
+
+        Status = status.Trim();
+        Path = path.Replace('\\\\', '/');
+    }
+
+    public string Status { get; }
+
+    public string Path { get; }
+}
+```
+
+### GitWorkspaceSnapshot
+
+```csharp
+public sealed record GitWorkspaceSnapshot
+{
+    public GitWorkspaceSnapshot(
+        GeneratedFilesReport generatedFiles,
+        IReadOnlyList<GitStatusEntry> statusEntries)
+    {
+        GeneratedFiles = generatedFiles ?? throw new ArgumentNullException(nameof(generatedFiles));
+        StatusEntries = (statusEntries ?? Array.Empty<GitStatusEntry>())
+            .OrderBy(entry => entry.Path, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    public GeneratedFilesReport GeneratedFiles { get; }
+
+    public IReadOnlyList<GitStatusEntry> StatusEntries { get; }
+}
 ```
 
 ---
 
-## 2. WorkspaceSummary
+## 4. Add Code Execution Core Models
 
 Create:
 
 ```text
-src/AiReliabilityEngineering.Core/Review/WorkspaceSummary.cs
+src/AiReliabilityEngineering.Core/CodeExecution/CodeExecutorKind.cs
+src/AiReliabilityEngineering.Core/CodeExecution/CodeExecutorSelection.cs
+src/AiReliabilityEngineering.Core/CodeExecution/CodeExecutionRequest.cs
+src/AiReliabilityEngineering.Core/CodeExecution/CodeExecutionResult.cs
+src/AiReliabilityEngineering.Core/CodeExecution/ICodeExecutor.cs
 ```
 
-Namespace:
+### CodeExecutorKind
 
 ```csharp
-namespace AiReliabilityEngineering.Core.Review;
-```
-
-Purpose:
-
-- hold a deterministic list of generated workspace files.
-
-Suggested implementation:
-
-```csharp
-namespace AiReliabilityEngineering.Core.Review;
-
-public sealed record WorkspaceSummary
+public enum CodeExecutorKind
 {
-    public WorkspaceSummary(
-        string workspaceRoot,
-        IReadOnlyList<string> files)
-    {
-        if (string.IsNullOrWhiteSpace(workspaceRoot))
-        {
-            throw new ArgumentException("Workspace root is required.", nameof(workspaceRoot));
-        }
-
-        if (files is null)
-        {
-            throw new ArgumentNullException(nameof(files));
-        }
-
-        if (files.Any(string.IsNullOrWhiteSpace))
-        {
-            throw new ArgumentException("Workspace files must not contain empty entries.", nameof(files));
-        }
-
-        WorkspaceRoot = workspaceRoot;
-        Files = files
-            .Select(path => path.Replace('\\', '/'))
-            .OrderBy(path => path, StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    public string WorkspaceRoot { get; }
-
-    public IReadOnlyList<string> Files { get; }
+    Fake,
+    OpenCode,
+    Codex
 }
 ```
 
-Rules:
-
-- Store paths relative to workspace root when possible.
-- Normalize path separators to `/`.
-- Sort files deterministically.
-
----
-
-## 3. ArtifactReviewResult
-
-Create:
-
-```text
-src/AiReliabilityEngineering.Core/Review/ArtifactReviewResult.cs
-```
-
-Namespace:
+### CodeExecutorSelection
 
 ```csharp
-namespace AiReliabilityEngineering.Core.Review;
-```
-
-Purpose:
-
-- aggregate review inputs and warnings.
-
-Suggested implementation:
-
-```csharp
-namespace AiReliabilityEngineering.Core.Review;
-
-public sealed record ArtifactReviewResult
+public sealed record CodeExecutorSelection
 {
-    public ArtifactReviewResult(
-        IReadOnlyList<RequiredArtifactCheck> checks,
-        WorkspaceSummary workspaceSummary,
-        IReadOnlyList<string> warnings)
+    public CodeExecutorSelection(CodeExecutorKind kind)
     {
-        if (checks is null)
-        {
-            throw new ArgumentNullException(nameof(checks));
-        }
-
-        if (checks.Any(check => check is null))
-        {
-            throw new ArgumentException("Checks must not contain null entries.", nameof(checks));
-        }
-
-        WorkspaceSummary = workspaceSummary ?? throw new ArgumentNullException(nameof(workspaceSummary));
-        Warnings = (warnings ?? Array.Empty<string>())
-            .Where(warning => !string.IsNullOrWhiteSpace(warning))
-            .ToArray();
-
-        Checks = checks.ToArray();
+        Kind = kind;
     }
 
-    public IReadOnlyList<RequiredArtifactCheck> Checks { get; }
+    public CodeExecutorKind Kind { get; }
 
-    public WorkspaceSummary WorkspaceSummary { get; }
+    public static CodeExecutorSelection Fake { get; } =
+        new(CodeExecutorKind.Fake);
+}
+```
 
-    public IReadOnlyList<string> Warnings { get; }
+### CodeExecutionRequest
 
-    public IReadOnlyList<RequiredArtifactCheck> Missing =>
-        Checks.Where(check => !check.Exists).ToArray();
+```csharp
+public sealed record CodeExecutionRequest
+{
+    public CodeExecutionRequest(
+        string workspaceDirectory,
+        string prompt,
+        TimeSpan timeout)
+    {
+        if (string.IsNullOrWhiteSpace(workspaceDirectory))
+        {
+            throw new ArgumentException("Workspace directory is required.", nameof(workspaceDirectory));
+        }
 
-    public bool HasMissingRequiredFiles => Missing.Count > 0;
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            throw new ArgumentException("Prompt is required.", nameof(prompt));
+        }
+
+        if (timeout <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeout));
+        }
+
+        WorkspaceDirectory = workspaceDirectory;
+        Prompt = prompt;
+        Timeout = timeout;
+    }
+
+    public string WorkspaceDirectory { get; }
+
+    public string Prompt { get; }
+
+    public TimeSpan Timeout { get; }
+}
+```
+
+### CodeExecutionResult
+
+```csharp
+public sealed record CodeExecutionResult
+{
+    public CodeExecutionResult(
+        bool succeeded,
+        int exitCode,
+        string standardOutput,
+        string standardError,
+        TimeSpan duration)
+    {
+        if (duration < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(duration));
+        }
+
+        Succeeded = succeeded;
+        ExitCode = exitCode;
+        StandardOutput = standardOutput ?? string.Empty;
+        StandardError = standardError ?? string.Empty;
+        Duration = duration;
+    }
+
+    public bool Succeeded { get; }
+
+    public int ExitCode { get; }
+
+    public string StandardOutput { get; }
+
+    public string StandardError { get; }
+
+    public TimeSpan Duration { get; }
+}
+```
+
+### ICodeExecutor
+
+```csharp
+public interface ICodeExecutor
+{
+    string Name { get; }
+
+    Task<CodeExecutionResult> ExecuteAsync(
+        CodeExecutionRequest request,
+        CancellationToken cancellationToken);
 }
 ```
 
@@ -521,399 +579,427 @@ public sealed record ArtifactReviewResult
 
 # Required Orchestration Components
 
-## 4. RequiredArtifactChecker
+## 5. GeneratedFilesReporter
 
 Create:
 
 ```text
-src/AiReliabilityEngineering.Orchestration/Agents/RequiredArtifactChecker.cs
-```
-
-Namespace:
-
-```csharp
-namespace AiReliabilityEngineering.Orchestration.Agents;
+src/AiReliabilityEngineering.Orchestration/Agents/GeneratedFilesReporter.cs
 ```
 
 Purpose:
 
-- check expected files in a run directory.
-
-Suggested signature:
-
-```csharp
-public sealed class RequiredArtifactChecker
-{
-    public IReadOnlyList<RequiredArtifactCheck> Check(RunContext runContext)
-    {
-        // implementation
-    }
-}
-```
-
-Rules:
-
-- Use actual `RunContext` and `RunPaths`.
-- Do not scan arbitrary directories.
-- Use fixed required file list from this plan.
-- Return checks with normalized relative paths.
-- Do not throw if files are missing.
-- Throw ArgumentNullException if runContext is null.
-
-Required file list:
-
-```text
-artifacts/specification.json
-artifacts/requirements.md
-artifacts/README.md
-artifacts/PLAN.md
-artifacts/tasks.json
-workspace/Directory.Packages.props
-workspace/GeneratedTool.slnx
-workspace/src/GeneratedTool.Cli/GeneratedTool.Cli.csproj
-workspace/src/GeneratedTool.Cli/Program.cs
-workspace/tests/GeneratedTool.Cli.Tests/GeneratedTool.Cli.Tests.csproj
-workspace/tests/GeneratedTool.Cli.Tests/SmokeTests.cs
-reports/build.md
-reports/tests.md
-```
-
-Categories:
-
-```text
-artifact -> paths under artifacts/
-workspace -> paths under workspace/
-report -> paths under reports/
-```
-
----
-
-## 5. WorkspaceSummaryBuilder
-
-Create:
-
-```text
-src/AiReliabilityEngineering.Orchestration/Agents/WorkspaceSummaryBuilder.cs
-```
-
-Namespace:
-
-```csharp
-namespace AiReliabilityEngineering.Orchestration.Agents;
-```
-
-Purpose:
-
-- produce a deterministic workspace file summary.
-
-Suggested signature:
-
-```csharp
-public sealed class WorkspaceSummaryBuilder
-{
-    public WorkspaceSummary Build(RunContext runContext)
-    {
-        // implementation
-    }
-}
-```
+- enumerate files under workspace;
+- exclude transient directories;
+- return GeneratedFilesReport.
 
 Rules:
 
 - Use `runContext.Paths.WorkspaceDirectory`.
-- If workspace directory does not exist, return summary with an empty file list.
-- Enumerate files recursively.
-- Return paths relative to workspace directory.
-- Normalize separators to `/`.
-- Sort deterministically.
-- Exclude transient build outputs if they exist:
+- Exclude:
+  - `.git/`
   - `bin/`
   - `obj/`
   - `.vs/`
   - `.idea/`
+- Return relative paths.
+- Normalize separators.
+- Sort deterministically.
 - Do not scan outside workspace.
-- Throw ArgumentNullException if runContext is null.
 
 ---
 
-## 6. ReviewReportWriter
+## 6. GitStatusParser
 
 Create:
 
 ```text
-src/AiReliabilityEngineering.Orchestration/Agents/ReviewReportWriter.cs
-```
-
-Namespace:
-
-```csharp
-namespace AiReliabilityEngineering.Orchestration.Agents;
+src/AiReliabilityEngineering.Orchestration/Agents/GitStatusParser.cs
 ```
 
 Purpose:
 
-- write:
-  - `reports/final-review.md`
-  - `reports/workspace-summary.md`
+- parse `git status --short` output.
 
-Suggested signature:
+Examples:
 
-```csharp
-public sealed class ReviewReportWriter
-{
-    public Task<IReadOnlyList<ArtifactRef>> WriteAsync(
-        ArtifactReviewResult result,
-        RunContext runContext,
-        CancellationToken cancellationToken)
-    {
-        // write reports
-    }
-}
+```text
+?? src/GeneratedTool.Cli/Program.cs
+ M src/GeneratedTool.Cli/Program.cs
+A  tests/SmokeTests.cs
+```
+
+Rules:
+
+- status is first two columns trimmed.
+- path is remaining text trimmed.
+- ignore blank lines.
+- normalize separators.
+- return GitStatusEntry list.
+
+---
+
+## 7. GitSnapshotReportWriter
+
+Create:
+
+```text
+src/AiReliabilityEngineering.Orchestration/Agents/GitSnapshotReportWriter.cs
+```
+
+Writes:
+
+```text
+reports/generated-files.md
+reports/generated-files.json
+reports/git-status.md
 ```
 
 Rules:
 
 - Use `runContext.Paths.ReportsDirectory`.
 - Ensure reports directory exists.
-- Write deterministic Markdown.
-- Do not include timestamps.
-- Do not include random IDs.
-- Do not include absolute paths except the workspace root in the `## Workspace Root` section of `workspace-summary.md`.
-- Return artifact refs for both files.
-- Do not overwrite build.md or tests.md.
-
-### final-review.md content requirements
-
-Must include:
-
-```markdown
-# Final Review
-
-## Run Output
-
-## Required Artifacts
-
-## Requirements
-
-## Documentation
-
-## Planning
-
-## Workspace
-
-## Build and Test Reports
-
-## Warnings
-
-## Suggested Next Steps
-```
-
-Required Artifacts section should contain a Markdown table:
-
-```markdown
-| Category | Path | Status |
-|---|---|---|
-| artifact | artifacts/specification.json | OK |
-| report | reports/build.md | Missing |
-```
-
-Warnings section:
-
-- if no warnings, write `No warnings.`;
-- if missing files exist, list them.
-
-Suggested next steps should mention:
-
-- review generated artifacts;
-- inspect build/test reports;
-- inspect generated workspace;
-- next future step may be Git snapshot or Codex/OpenCode integration.
-
-### workspace-summary.md content requirements
-
-Must include:
-
-```markdown
-# Workspace Summary
-
-## Workspace Root
-
-## Generated Files
-
-## Project Files
-
-## Test Files
-
-## Reports
-```
-
-The `## Workspace Root` section may include the absolute value of `runContext.Paths.WorkspaceDirectory`.
-
-Generated Files section should list all workspace files from `WorkspaceSummary.Files`.
-
-All generated file entries must be relative to `runContext.Paths.WorkspaceDirectory`, use `/` separators, and be sorted with ordinal ordering.
-
-Project Files should list files under:
-
-```text
-src/
-```
-
-Test Files should list files under:
-
-```text
-tests/
-```
-
-Reports should mention:
-
-```text
-reports/build.md
-reports/tests.md
-reports/final-review.md
-reports/workspace-summary.md
-```
+- Write deterministic Markdown/JSON.
+- generated-files.json should contain file count, total size, and files.
+- git-status.md should include status table.
+- If git is unavailable, write a report that states git snapshot could not be collected.
+- Return artifact refs.
 
 ---
 
-## 7. ArtifactReviewAgent
+## 8. GitWorkspaceSnapshotAgent
 
 Create:
 
 ```text
-src/AiReliabilityEngineering.Orchestration/Agents/ArtifactReviewAgent.cs
+src/AiReliabilityEngineering.Orchestration/Agents/GitWorkspaceSnapshotAgent.cs
 ```
 
-Namespace:
+The agent implements IAgent.
 
-```csharp
-namespace AiReliabilityEngineering.Orchestration.Agents;
+Dependencies:
+
+- IToolExecutor for git commands;
+- IRunLogger;
+- GeneratedFilesReporter;
+- GitStatusParser;
+- GitSnapshotReportWriter.
+
+Execution flow:
+
+1. Check cancellation.
+2. Validate context.
+3. Ensure workspace directory exists.
+4. If `.git` does not exist under workspace:
+   - run `git init` in workspace.
+5. Run `git status --short` in workspace.
+6. Parse status output.
+7. Generate files report.
+8. Write generated-files.md, generated-files.json, git-status.md.
+9. Return AgentResult.Success if reports were written.
+
+Timeouts:
+
+```text
+git init          -> 30 seconds
+git status --short -> 30 seconds
 ```
 
-The agent should implement existing `IAgent`.
+If git is not installed or git command fails:
 
-Suggested dependencies:
+- do not fail the whole run;
+- write reports indicating git command failure;
+- return AgentResult.Success if reports were written.
 
-```csharp
-public sealed class ArtifactReviewAgent : IAgent
-{
-    private readonly IRunLogger _logger;
-    private readonly RequiredArtifactChecker _artifactChecker;
-    private readonly WorkspaceSummaryBuilder _workspaceSummaryBuilder;
-    private readonly ReviewReportWriter _reportWriter;
+Reason: Git snapshot is finalization/reporting, not a critical generation step.
 
-    public ArtifactReviewAgent(
-        IRunLogger logger,
-        RequiredArtifactChecker? artifactChecker = null,
-        WorkspaceSummaryBuilder? workspaceSummaryBuilder = null,
-        ReviewReportWriter? reportWriter = null)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _artifactChecker = artifactChecker ?? new RequiredArtifactChecker();
-        _workspaceSummaryBuilder = workspaceSummaryBuilder ?? new WorkspaceSummaryBuilder();
-        _reportWriter = reportWriter ?? new ReviewReportWriter();
-    }
+---
 
-    public string Name => "ArtifactReviewAgent";
+## 9. CodeExecutionPromptBuilder
 
-    public async Task<AgentResult> ExecuteAsync(
-        AgentContext context,
-        CancellationToken cancellationToken)
-    {
-        // implementation
-    }
-}
+Create:
+
+```text
+src/AiReliabilityEngineering.Orchestration/Agents/CodeExecutionPromptBuilder.cs
 ```
 
-### Required execution flow
+Purpose:
 
-1. Check cancellation at the start.
-2. Validate context is not null.
-3. Log start event.
-4. Check required artifacts.
-5. Build workspace summary.
-6. Build warnings:
-   - one warning per missing required file;
-   - optional warning if workspace is empty.
-7. Write final review reports.
-8. Log completion.
-9. Return AgentResult.Success with report artifact refs.
+- build a bounded prompt for external code agents from generated artifacts.
 
-Failure behavior:
+Inputs:
 
-- If report writing fails, return AgentResult.Failure.
-- Do not fail only because required files are missing.
+- specification.json;
+- tasks.json;
+- README.md;
+- PLAN.md.
+
+Rules:
+
+- Read only from artifacts directory.
+- Do not include secrets.
+- Do not include environment variables.
+- Keep prompt bounded.
+- If files are too large, truncate each section to a fixed max length, e.g. 6000 characters.
+- Prompt must explicitly say:
+  - work only inside current workspace;
+  - do not delete unrelated files;
+  - keep generated project buildable;
+  - run no network commands unless required by tool itself;
+  - implement only small safe improvements;
+  - do not change AIRE repository root.
+
+Suggested prompt sections:
+
+```text
+# AIRE Coding Task
+
+## Scope
+You are operating inside the generated run workspace only.
+
+## Project Specification
+...
+
+## Implementation Tasks
+...
+
+## Existing Documentation
+...
+
+## Requirements
+- Keep build passing.
+- Keep tests passing.
+- Make small, safe changes.
+- Do not modify files outside workspace.
+```
+
+---
+
+## 10. CodeExecutionReportWriter
+
+Create:
+
+```text
+src/AiReliabilityEngineering.Orchestration/Agents/CodeExecutionReportWriter.cs
+```
+
+Writes:
+
+```text
+reports/code-execution.md
+```
+
+Include:
+
+- executor name;
+- exit code;
+- duration;
+- stdout;
+- stderr;
+- success/failure.
+
+Do not include secrets.
+
+---
+
+## 11. ExternalCodeAgent
+
+Create:
+
+```text
+src/AiReliabilityEngineering.Orchestration/Agents/ExternalCodeAgent.cs
+```
+
+Implements IAgent.
+
+Dependencies:
+
+- TemplateCodeAgent or DotnetTemplateProjectWriter/WorkspaceArtifactReader;
+- ICodeExecutor;
+- CodeExecutionPromptBuilder;
+- CodeExecutionReportWriter;
+- IRunLogger.
+
+Execution flow:
+
+1. Check cancellation.
+2. Create deterministic template workspace first.
+3. Build code execution prompt from artifacts.
+4. Create CodeExecutionRequest:
+   - workspaceDirectory = runContext.Paths.WorkspaceDirectory;
+   - timeout = 10 minutes;
+   - prompt from builder.
+5. Run ICodeExecutor.
+6. Write reports/code-execution.md.
+7. If executor failed, return AgentResult.Failure.
+8. If executor succeeded, return AgentResult.Success.
+
+Rules:
+
+- Do not run build/test here.
+- BuildTestAgent validates after Code step.
+- Do not allow executor to run outside workspace.
+- Do not pass secrets in prompt.
 - Do not swallow OperationCanceledException.
 
 ---
 
-# Workflow Profile Changes
+# Required Infrastructure Components
 
-## 8. Extend WorkflowProfile
+## 12. FakeCodeExecutor
 
-Add:
+Create:
 
 ```text
-ai-demo-dotnet-review
+src/AiReliabilityEngineering.Infrastructure/CodeExecution/FakeCodeExecutor.cs
 ```
 
-Enum value:
+Behavior:
 
-```csharp
-AiDemoDotnetReview
+- Name = `fake-code-executor`;
+- does not modify files;
+- returns success;
+- deterministic stdout.
+
+Used in tests and optional local profiles if needed.
+
+---
+
+## 13. OpenCodeExecutor
+
+Create:
+
+```text
+src/AiReliabilityEngineering.Infrastructure/CodeExecution/OpenCodeExecutor.cs
 ```
 
-Current enum likely has:
+Behavior:
+
+- Name = `opencode`;
+- uses IToolExecutor or ShellToolExecutor through composition;
+- runs command in workspace;
+- timeout = request.Timeout;
+- captures stdout/stderr;
+- maps result to CodeExecutionResult.
+
+Do not hardcode a single OpenCode command if current CLI syntax is uncertain.
+
+Instead, define command construction in one small method:
 
 ```csharp
-Fake,
-AiRequirements,
-AiDemo,
-AiDemoDotnet
+protected virtual ToolExecutionRequest CreateToolRequest(CodeExecutionRequest request)
 ```
 
-Update to:
+Recommended initial command:
+
+```text
+opencode run <prompt>
+```
+
+If the actual installed OpenCode CLI uses different syntax, this one method can be adjusted later.
+
+Do not fail at construction time if OpenCode is not installed. Runtime command failure is reported in code-execution.md.
+
+---
+
+## 14. CodexExecutor
+
+Create:
+
+```text
+src/AiReliabilityEngineering.Infrastructure/CodeExecution/CodexExecutor.cs
+```
+
+Behavior:
+
+- Name = `codex`;
+- uses IToolExecutor or ShellToolExecutor through composition;
+- runs command in workspace;
+- timeout = request.Timeout;
+- captures stdout/stderr;
+- maps result to CodeExecutionResult.
+
+Do not hardcode risky flags.
+
+Recommended initial command:
+
+```text
+codex exec <prompt>
+```
+
+If the installed Codex CLI syntax differs, command construction is isolated in:
 
 ```csharp
-Fake,
-AiRequirements,
-AiDemo,
-AiDemoDotnet,
-AiDemoDotnetReview
+protected virtual ToolExecutionRequest CreateToolRequest(CodeExecutionRequest request)
+```
+
+Runtime command failure should be captured and reported, not crash the process.
+
+---
+
+## 15. CodeExecutorFactory
+
+Create if useful:
+
+```text
+src/AiReliabilityEngineering.Infrastructure/CodeExecution/CodeExecutorFactory.cs
+```
+
+Inputs:
+
+- CodeExecutorSelection;
+- IToolExecutor.
+
+Output:
+
+- FakeCodeExecutor;
+- OpenCodeExecutor;
+- CodexExecutor.
+
+Do not instantiate ShellToolExecutor in Orchestration.
+
+CLI composition root wires:
+
+```text
+CodeExecutorSelection -> CodeExecutorFactory -> executor
 ```
 
 ---
 
-## 9. Update WorkflowProfileParser
+# CLI and Profile Selection
 
-Support CLI name:
+## 16. Add Code Executor Selection Internally
 
-```text
-ai-demo-dotnet-review
-```
+Do not add a public `--code-executor` option yet unless necessary.
 
-Required supported names after this step:
+Map profiles:
 
 ```text
-fake
-ai-requirements
-ai-demo
-ai-demo-dotnet
-ai-demo-dotnet-review
+ai-demo-dotnet-opencode -> CodeExecutorKind.OpenCode
+ai-demo-dotnet-codex    -> CodeExecutorKind.Codex
 ```
 
-Rules:
+Keep the selection internal to AgentPipelineFactory/CompositionRoot.
 
-- Missing profile maps to Fake.
-- Unknown profile returns false.
-- ToCliName maps AiDemoDotnetReview to `ai-demo-dotnet-review`.
-- SupportedCliNames includes `ai-demo-dotnet-review`.
+Reason:
+
+- profile already expresses executor choice;
+- fewer CLI options;
+- less user confusion.
 
 ---
 
-## 10. Update AgentPipelineFactory
+## 17. Update AgentPipelineFactory
 
-For `WorkflowProfile.AiDemoDotnetReview`, create pipeline:
+Add profiles:
+
+```text
+AiDemoDotnetReviewGit
+AiDemoDotnetOpenCode
+AiDemoDotnetCodex
+```
+
+Profile `AiDemoDotnetReviewGit`:
 
 ```text
 Requirements  -> AiRequirementsAgent
@@ -922,311 +1008,257 @@ Planning      -> AiPlannerAgent
 Code          -> TemplateCodeAgent
 Testing       -> BuildTestAgent
 Review        -> ArtifactReviewAgent
+Finalize      -> GitWorkspaceSnapshotAgent
 ```
 
-Use selected provider for AI agents.
+Profile `AiDemoDotnetOpenCode`:
 
-Use `IToolExecutor` for BuildTestAgent.
+```text
+Requirements  -> AiRequirementsAgent
+Documentation -> AiDocumentationAgent
+Planning      -> AiPlannerAgent
+Code          -> ExternalCodeAgent(OpenCodeExecutor)
+Testing       -> BuildTestAgent
+Review        -> ArtifactReviewAgent
+Finalize      -> GitWorkspaceSnapshotAgent
+```
 
-Rules:
+Profile `AiDemoDotnetCodex`:
 
-- Fake profile remains unchanged.
-- AiRequirements profile remains unchanged.
-- AiDemo profile remains unchanged.
-- AiDemoDotnet profile remains unchanged.
-- AiDemoDotnetReview replaces only the review step with ArtifactReviewAgent.
-- Orchestration project must remain infrastructure-agnostic.
+```text
+Requirements  -> AiRequirementsAgent
+Documentation -> AiDocumentationAgent
+Planning      -> AiPlannerAgent
+Code          -> ExternalCodeAgent(CodexExecutor)
+Testing       -> BuildTestAgent
+Review        -> ArtifactReviewAgent
+Finalize      -> GitWorkspaceSnapshotAgent
+```
+
+AgentPipeline must support Finalize step.
+
+---
+
+## 18. Update CLI Help
+
+Help should mention new profiles through existing profile help.
+
+Supported profiles now include:
+
+```text
+fake
+ai-requirements
+ai-demo
+ai-demo-dotnet
+ai-demo-dotnet-review
+ai-demo-dotnet-review-git
+ai-demo-dotnet-opencode
+ai-demo-dotnet-codex
+```
+
+Do not add code-executor option yet.
 
 ---
 
 # Tests
 
-## 11. Core review model tests
+## 19. Core tests
 
-Add tests under:
+Add tests for:
 
-```text
-tests/AiReliabilityEngineering.Core.Tests/Review/
-```
-
-Tests for RequiredArtifactCheck:
-
-- accepts valid values;
-- rejects blank relative path;
-- rejects blank category;
-- normalizes path separators.
-
-Tests for WorkspaceSummary:
-
-- accepts valid values;
-- rejects blank workspace root;
-- rejects null file list;
-- rejects blank file entries;
-- normalizes path separators;
-- sorts files deterministically.
-
-Tests for ArtifactReviewResult:
-
-- accepts valid checks and workspace summary;
-- rejects null checks;
-- rejects null workspace summary;
-- Missing contains only missing files;
-- HasMissingRequiredFiles is true when any check is missing;
-- warnings ignore null/blank values.
+- GeneratedFileEntry validation;
+- GeneratedFilesReport sorting/count/size;
+- GitStatusEntry validation;
+- GitWorkspaceSnapshot sorting;
+- CodeExecutionRequest validation;
+- CodeExecutionResult validation;
+- CodeExecutorSelection;
+- WorkflowProfileParser new profiles.
 
 ---
 
-## 12. RequiredArtifactChecker tests
+## 20. Orchestration tests
 
-Use real RunContext and RunPaths with temp directories.
+Add tests for:
 
-Required tests:
+### GeneratedFilesReporter
 
-- returns all expected checks;
-- marks existing files as present;
-- marks missing files as missing;
-- categories are artifact/workspace/report;
-- relative paths are normalized;
-- does not throw when files are missing.
+- excludes bin/obj/.git;
+- returns relative sorted files;
+- normalizes separators.
 
----
+### GitStatusParser
 
-## 13. WorkspaceSummaryBuilder tests
+- parses untracked files;
+- parses modified files;
+- parses added files;
+- ignores blank lines.
 
-Use real RunContext and RunPaths with temp directories.
+### GitSnapshotReportWriter
 
-Required tests:
+- writes generated-files.md;
+- writes generated-files.json;
+- writes git-status.md;
+- JSON is valid.
 
-- returns empty list when workspace directory is missing;
-- lists files recursively;
-- returns paths relative to workspace;
-- normalizes separators;
-- sorts files deterministically;
-- excludes bin and obj directories.
+### GitWorkspaceSnapshotAgent
 
----
+- runs git init when .git missing;
+- runs git status --short;
+- writes reports;
+- succeeds even if git command fails but reports are written;
+- uses workspace directory;
+- uses 30-second timeouts.
 
-## 14. ReviewReportWriter tests
+Use fake/recording IToolExecutor. Do not require real git in unit tests.
 
-Required tests:
+### CodeExecutionPromptBuilder
 
-- writes reports/final-review.md;
-- writes reports/workspace-summary.md;
-- final-review.md contains required sections;
-- final-review.md contains required artifact table;
-- final-review.md lists missing files as warnings;
-- workspace-summary.md contains required sections;
-- returned artifact refs include both files;
-- does not overwrite build.md or tests.md.
+- includes specification/tasks/docs;
+- truncates long sections;
+- does not read outside artifacts.
 
----
+### CodeExecutionReportWriter
 
-## 15. ArtifactReviewAgent tests
+- writes code-execution.md;
+- includes executor name, exit code, stdout/stderr.
 
-Use real RunContext and RunPaths.
+### ExternalCodeAgent
 
-Required tests:
+- creates template baseline first;
+- calls ICodeExecutor with workspace directory;
+- uses 10-minute timeout;
+- writes code-execution.md;
+- returns failure on executor failure;
+- does not run build/test itself.
 
-- succeeds when required artifacts exist;
-- writes final-review.md;
-- writes workspace-summary.md;
-- returns artifact refs;
-- succeeds even when some required files are missing;
-- missing files appear in final-review.md warnings;
-- cancellation propagates OperationCanceledException;
-- report writing failure returns AgentResult.Failure if testable.
+Use fake ICodeExecutor.
 
 ---
 
-## 16. Workflow profile tests
+## 21. Infrastructure tests
 
-Update WorkflowProfileParser tests:
+Add tests for:
 
-- parses `ai-demo-dotnet-review`;
-- ToCliName maps AiDemoDotnetReview to `ai-demo-dotnet-review`;
-- SupportedCliNames includes `ai-demo-dotnet-review`.
+### FakeCodeExecutor
 
-Update AgentPipelineFactory tests:
+- returns success;
+- does not require external commands.
 
-- AiDemoDotnetReview pipeline contains:
-  - AiRequirementsAgent
-  - AiDocumentationAgent
-  - AiPlannerAgent
-  - TemplateCodeAgent
-  - BuildTestAgent
-  - ArtifactReviewAgent
-- step order remains:
-  - Requirements
-  - Documentation
-  - Planning
-  - Code
-  - Testing
-  - Review
-- AiDemoDotnet profile still uses FakeReviewerAgent.
+### OpenCodeExecutor
 
----
+- creates expected ToolExecutionRequest;
+- uses workspace directory;
+- passes timeout;
+- maps tool result success/failure;
+- does not call real OpenCode.
 
-## 17. Orchestrator ai-demo-dotnet-review tests
+### CodexExecutor
 
-Add test:
+- creates expected ToolExecutionRequest;
+- uses workspace directory;
+- passes timeout;
+- maps tool result success/failure;
+- does not call real Codex.
 
-```text
-ai-demo-dotnet-review profile completes with fake provider and fake tool executor
-```
-
-Arrange:
-
-- RunRequest with WorkflowProfile.AiDemoDotnetReview and Fake provider.
-- Use test pipeline/composition that injects fake tool executor returning successful build/test results.
-- Run orchestrator.
-
-Assert:
-
-- run succeeds;
-- final status is Completed;
-- artifacts/specification.json exists;
-- artifacts/requirements.md exists;
-- artifacts/README.md exists;
-- artifacts/PLAN.md exists;
-- artifacts/tasks.json exists;
-- workspace/Directory.Packages.props exists;
-- workspace/GeneratedTool.slnx exists;
-- workspace generated project files exist;
-- reports/build.md exists;
-- reports/tests.md exists;
-- reports/final-review.md exists;
-- reports/workspace-summary.md exists;
-- run-state step agents include:
-  - AiRequirementsAgent
-  - AiDocumentationAgent
-  - AiPlannerAgent
-  - TemplateCodeAgent
-  - BuildTestAgent
-  - ArtifactReviewAgent
-
-Do not make this orchestration unit test depend on real dotnet process execution.
+Use fake/recording IToolExecutor.
 
 ---
 
-## 18. CLI tests
+## 22. Profile/orchestrator tests
 
-Update CLI tests:
+Add tests:
 
-- help mentions `ai-demo-dotnet-review`;
-- parser accepts `ai-demo-dotnet-review`;
-- profile dispatch passes `WorkflowProfile.AiDemoDotnetReview` to the run delegate;
-- CLI unit tests must not depend on real `dotnet build` or `dotnet test` execution;
-- full generated artifact assertions must remain in orchestration tests with a fake `IToolExecutor`;
-- manual verification may run the real CLI command with `--profile ai-demo-dotnet-review --provider fake`.
+### ai-demo-dotnet-review-git
 
-Do not make automated tests flaky by depending on external environment unexpectedly.
+- completes with fake provider and fake tool executor;
+- includes Finalize step;
+- writes generated-files.md/json and git-status.md.
+
+### ai-demo-dotnet-opencode
+
+- builds pipeline with ExternalCodeAgent;
+- uses OpenCode executor selection;
+- unit/integration test uses FakeCodeExecutor or recording executor, not real OpenCode.
+
+### ai-demo-dotnet-codex
+
+- builds pipeline with ExternalCodeAgent;
+- uses Codex executor selection;
+- unit/integration test uses FakeCodeExecutor or recording executor, not real Codex.
+
+Do not make automated tests require OpenCode/Codex installed.
 
 ---
 
 # Documentation
 
-## 19. Add docs/artifact-review-agent.md
-
-Create:
-
-```text
-docs/artifact-review-agent.md
-```
+## 23. Add docs/git-workspace-snapshot.md
 
 Explain:
 
-- ArtifactReviewAgent performs deterministic review;
-- it does not call AI;
-- it checks required artifacts;
-- it builds workspace summary;
-- it writes final-review.md and workspace-summary.md;
-- missing files are warnings, not automatic review failures.
+- local workspace git init/status;
+- generated files report;
+- no commits/pushes;
+- reports generated.
 
----
+## 24. Add docs/generated-files-report.md
 
-## 20. Add docs/demo-final-review.md
+Explain:
 
-Create:
+- what generated-files.md/json contain;
+- excluded directories;
+- deterministic ordering.
 
-```text
-docs/demo-final-review.md
-```
+## 25. Add docs/code-executor-abstraction.md
 
-Include command:
+Explain:
 
-```bash
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
-```
+- ICodeExecutor;
+- CodeExecutionRequest/Result;
+- FakeCodeExecutor;
+- future executors.
 
-Expected review files:
+## 26. Add docs/opencode-codex-integration.md
 
-```text
-reports/final-review.md
-reports/workspace-summary.md
-```
+Explain:
 
-Explain that this profile is the most complete local fake-provider demo.
+- OpenCode/Codex profiles are opt-in;
+- tools must be installed/configured by developer;
+- AIRE runs them only inside workspace;
+- build/test validates after execution;
+- no secrets in prompts.
 
----
+Mention that Codex CLI is a local terminal coding agent capable of reading/changing/running code in the selected directory, and OpenCode is an open-source coding agent usable from terminal/desktop/IDE. Do not copy long external docs.
 
-## 21. Update docs/workflow-profiles.md
+## 27. Add docs/demo-external-code-executors.md
 
-Add:
-
-```markdown
-## ai-demo-dotnet-review
-
-Runs AI-aware requirements, documentation, and planning agents, generates a deterministic .NET CLI workspace, validates it with build/test commands, and writes deterministic final review reports.
+Include commands:
 
 ```bash
-aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review-git --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-opencode --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-codex --provider fake
 ```
-```
 
----
+Explain OpenCode/Codex commands require tools installed.
 
-## 22. Update docs/wiki.md
+## 28. Update README.md
 
-If exists, add:
+Add short section:
 
 ```markdown
-## ArtifactReviewAgent
+## Git Snapshot and External Code Executors
 
-Performs deterministic review of generated artifacts and workspace files.
+AIRE can now generate Git/workspace reports and includes opt-in profiles for OpenCode and Codex executors.
 
-## ai-demo-dotnet-review Profile
-
-Runs the current most complete local demo pipeline, ending with ArtifactReviewAgent.
-```
-
----
-
-## 23. Update README.md
-
-Add a short section:
-
-```markdown
-## Final Review Demo
-
-Run the most complete local demo:
+Local Git snapshot demo:
 
 ```bash
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review-git --provider fake
 ```
 
-The run produces:
-
-- requirements artifacts
-- documentation artifacts
-- planning artifacts
-- generated .NET workspace
-- build/test reports
-- final review reports
-
-Review:
-
-- reports/final-review.md
-- reports/workspace-summary.md
+OpenCode and Codex profiles are opt-in and require the corresponding CLI tools to be installed and configured.
 ```
 
 ---
@@ -1240,20 +1272,20 @@ dotnet build
 dotnet test AiReliabilityEngineering.slnx
 dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
 dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --profile fake
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --profile ai-requirements --provider fake
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo --provider fake
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet --provider fake
 dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review-git --provider fake
 ```
 
-OpenAI manual demo is valid usage, but it may fail through the normal failed-run path if upstream OpenAI output does not match the required documentation markers or planner JSON shape. ArtifactReviewAgent must not compensate for those upstream AI contract failures.
+Do not require OpenCode/Codex installed for normal tests.
+
+Manual only:
 
 ```bash
-export OPENAI_API_KEY="..."
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider openai --model <model-name>
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-opencode --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-codex --provider fake
 ```
 
-Cleanup command should still work when used against disposable run data:
+Cleanup still works:
 
 ```bash
 dotnet run --project src/AiReliabilityEngineering.Cli -- cleanup
@@ -1263,110 +1295,43 @@ dotnet run --project src/AiReliabilityEngineering.Cli -- cleanup
 
 # Suggested Implementation Order for Codex
 
-Follow this order.
+## Task 1: Add Finalize workflow step and new profiles
 
-## Task 1: Add Core review models
+Update WorkflowStep, WorkflowProfile, parser, and pipeline support.
 
-Create:
+## Task 2: Add Git/generated-files core models
 
-```text
-src/AiReliabilityEngineering.Core/Review/RequiredArtifactCheck.cs
-src/AiReliabilityEngineering.Core/Review/WorkspaceSummary.cs
-src/AiReliabilityEngineering.Core/Review/ArtifactReviewResult.cs
-```
+Add models and tests.
 
-Add tests.
+## Task 3: Add GeneratedFilesReporter and GitStatusParser
 
-Run:
+Add orchestration helpers and tests.
 
-```bash
-dotnet test AiReliabilityEngineering.slnx
-```
+## Task 4: Add GitSnapshotReportWriter and GitWorkspaceSnapshotAgent
 
-## Task 2: Add RequiredArtifactChecker
+Use fake tool executor tests.
 
-Create:
+## Task 5: Add CodeExecution core abstractions
 
-```text
-src/AiReliabilityEngineering.Orchestration/Agents/RequiredArtifactChecker.cs
-```
+Add ICodeExecutor and related models/tests.
+
+## Task 6: Add CodeExecutionPromptBuilder and CodeExecutionReportWriter
 
 Add tests.
 
-Run:
+## Task 7: Add ExternalCodeAgent
 
-```bash
-dotnet test AiReliabilityEngineering.slnx
-```
+Use fake code executor tests.
 
-## Task 3: Add WorkspaceSummaryBuilder
+## Task 8: Add infrastructure code executors
 
-Create:
+Add FakeCodeExecutor, OpenCodeExecutor, CodexExecutor, CodeExecutorFactory.
 
-```text
-src/AiReliabilityEngineering.Orchestration/Agents/WorkspaceSummaryBuilder.cs
-```
+## Task 9: Wire profiles in AgentPipelineFactory and CompositionRoot
 
-Add tests.
+Keep Orchestration infrastructure-agnostic.
 
-Run:
-
-```bash
-dotnet test AiReliabilityEngineering.slnx
-```
-
-## Task 4: Add ReviewReportWriter
-
-Create:
-
-```text
-src/AiReliabilityEngineering.Orchestration/Agents/ReviewReportWriter.cs
-```
-
-Add tests.
-
-Run:
-
-```bash
-dotnet test AiReliabilityEngineering.slnx
-```
-
-## Task 5: Add ArtifactReviewAgent
-
-Create:
-
-```text
-src/AiReliabilityEngineering.Orchestration/Agents/ArtifactReviewAgent.cs
-```
-
-Add tests.
-
-Run:
-
-```bash
-dotnet test AiReliabilityEngineering.slnx
-```
-
-## Task 6: Add ai-demo-dotnet-review workflow profile
-
-Update:
-
-```text
-WorkflowProfile
-WorkflowProfileParser
-AgentPipelineFactory
-CLI help/tests if needed
-```
-
-Run:
-
-```bash
-dotnet test AiReliabilityEngineering.slnx
-```
-
-## Task 7: Add orchestration/CLI coverage and docs
-
-Create/update docs and README.
+## Task 10: Add docs and README updates
 
 Run final verification.
 
@@ -1374,92 +1339,78 @@ Run final verification.
 
 # Acceptance Criteria
 
-The task is complete when all criteria are satisfied.
+## Git Snapshot
 
-## Core
+- Generated files report is written.
+- Git status report is written.
+- Git command failure does not fail finalization if reports are written.
+- No commits/pushes are performed.
+- Unit tests do not require real git.
 
-- RequiredArtifactCheck exists and validates inputs.
-- WorkspaceSummary exists and validates inputs.
-- ArtifactReviewResult exists and validates inputs.
-- Core review tests pass.
+## Code Executor Abstraction
 
-## Review Agent
+- ICodeExecutor exists.
+- FakeCodeExecutor exists.
+- CodeExecutionPromptBuilder exists.
+- CodeExecutionReportWriter exists.
+- ExternalCodeAgent exists.
+- ExternalCodeAgent creates template baseline before running executor.
+- ExternalCodeAgent uses 10-minute timeout.
+- BuildTestAgent remains responsible for validation.
 
-- RequiredArtifactChecker exists.
-- WorkspaceSummaryBuilder exists.
-- ReviewReportWriter exists.
-- ArtifactReviewAgent exists.
-- ArtifactReviewAgent implements IAgent.
-- ArtifactReviewAgent does not call AI.
-- ArtifactReviewAgent writes reports/final-review.md.
-- ArtifactReviewAgent writes reports/workspace-summary.md.
-- ArtifactReviewAgent returns success even when expected files are missing, as long as reports are written.
-- Missing files appear as warnings.
-- Tests pass.
+## OpenCode/Codex
 
-## Workflow
+- OpenCodeExecutor exists.
+- CodexExecutor exists.
+- Both run only inside workspace.
+- Both use IToolExecutor/ShellToolExecutor through infrastructure composition.
+- No automated tests require actual OpenCode/Codex.
+- Runtime failures are captured in reports.
 
-- WorkflowProfile includes AiDemoDotnetReview.
-- CLI profile name is `ai-demo-dotnet-review`.
-- ai-demo-dotnet-review profile uses:
-  - AiRequirementsAgent
-  - AiDocumentationAgent
-  - AiPlannerAgent
-  - TemplateCodeAgent
-  - BuildTestAgent
-  - ArtifactReviewAgent
-- ai-demo-dotnet profile remains unchanged and still uses FakeReviewerAgent.
-- Other existing profiles remain unchanged.
+## Profiles
 
-## Demo
-
-- `--profile ai-demo-dotnet-review --provider fake` completes successfully.
-- The run contains:
-  - reports/final-review.md
-  - reports/workspace-summary.md
+- ai-demo-dotnet-review-git exists.
+- ai-demo-dotnet-opencode exists.
+- ai-demo-dotnet-codex exists.
+- Default profile remains fake.
+- Existing profiles remain unchanged.
 
 ## Documentation
 
-- docs/artifact-review-agent.md exists.
-- docs/demo-final-review.md exists.
-- docs/workflow-profiles.md mentions ai-demo-dotnet-review.
-- README includes final review demo.
-- Docs explain review is deterministic and does not call AI.
+- git-workspace-snapshot.md exists.
+- generated-files-report.md exists.
+- code-executor-abstraction.md exists.
+- opencode-codex-integration.md exists.
+- demo-external-code-executors.md exists.
+- README is updated.
 
 ## Verification
 
-These commands pass:
+These pass:
 
 ```bash
 dotnet build
 dotnet test AiReliabilityEngineering.slnx
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --profile fake
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --profile ai-requirements --provider fake
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo --provider fake
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet --provider fake
-dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review-git --provider fake
 ```
 
-Cleanup passes against disposable run data:
+Manual optional profiles:
 
 ```bash
-dotnet run --project src/AiReliabilityEngineering.Cli -- cleanup
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-opencode --provider fake
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-codex --provider fake
 ```
 
 ---
 
 # Notes for Codex
 
-- Keep this step focused on deterministic final review.
-- Do not implement AI review.
-- Do not add Codex or OpenCode.
-- Do not add Docker.
-- Do not add Kubernetes.
-- Do not add Git integration.
-- Do not parse complex compiler/test output.
-- Do not change existing profiles.
-- Add only the new ai-demo-dotnet-review profile.
+- Keep this step safety-first.
+- Do not add Docker or Kubernetes.
+- Do not add Git commits or pushes.
+- Do not require OpenCode/Codex installed in automated tests.
+- Do not pass secrets in prompts.
+- Do not execute outside workspace.
+- Keep default profile unchanged.
 - Use temporary directories in tests.
-- Preserve existing stable CLI behavior.
 - Save this file as UTF-8 without BOM.
