@@ -142,6 +142,7 @@ public sealed class AgentPipeline
         WorkflowStep.Code => RunStatus.PlanningCompleted,
         WorkflowStep.Testing => RunStatus.CodeCompleted,
         WorkflowStep.Review => RunStatus.TestingCompleted,
+        WorkflowStep.Finalize => RunStatus.ReviewCompleted,
         _ => RunStatus.Running
     };
 
@@ -153,6 +154,7 @@ public sealed class AgentPipeline
         WorkflowStep.Code => RunStatus.CodeCompleted,
         WorkflowStep.Testing => RunStatus.TestingCompleted,
         WorkflowStep.Review => RunStatus.ReviewCompleted,
+        WorkflowStep.Finalize => RunStatus.FinalizationCompleted,
         _ => RunStatus.Running
     };
 }

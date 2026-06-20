@@ -1,4 +1,5 @@
 using AiReliabilityEngineering.Core.Ai;
+using AiReliabilityEngineering.Core.CodeExecution;
 using AiReliabilityEngineering.Core.Steps;
 using AiReliabilityEngineering.Core.Tools;
 using AiReliabilityEngineering.Core.Workflow;
@@ -11,15 +12,26 @@ namespace AiReliabilityEngineering.Orchestration.Pipeline;
 public sealed class AgentPipelineFactory
 {
     private readonly Func<AiProviderSelection, IAiProvider> _aiProviderFactory;
+    private readonly Func<CodeExecutorSelection, ICodeExecutor> _codeExecutorFactory;
     private readonly Func<IToolExecutor> _toolExecutorFactory;
     private readonly TimeProvider _timeProvider;
 
     public AgentPipelineFactory(
         Func<AiProviderSelection, IAiProvider> aiProviderFactory,
+        Func<IToolExecutor>? toolExecutorFactory,
+        TimeProvider? timeProvider = null)
+        : this(aiProviderFactory, null, toolExecutorFactory, timeProvider)
+    {
+    }
+
+    public AgentPipelineFactory(
+        Func<AiProviderSelection, IAiProvider> aiProviderFactory,
+        Func<CodeExecutorSelection, ICodeExecutor>? codeExecutorFactory = null,
         Func<IToolExecutor>? toolExecutorFactory = null,
         TimeProvider? timeProvider = null)
     {
         _aiProviderFactory = aiProviderFactory ?? throw new ArgumentNullException(nameof(aiProviderFactory));
+        _codeExecutorFactory = codeExecutorFactory ?? (_ => new MissingCodeExecutor());
         _toolExecutorFactory = toolExecutorFactory ?? (() => new MissingToolExecutor());
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -41,6 +53,9 @@ public sealed class AgentPipelineFactory
             WorkflowProfile.AiDemo => CreateAiDemoSteps(aiProviderSelection, logger),
             WorkflowProfile.AiDemoDotnet => CreateAiDemoDotnetSteps(aiProviderSelection, logger),
             WorkflowProfile.AiDemoDotnetReview => CreateAiDemoDotnetReviewSteps(aiProviderSelection, logger),
+            WorkflowProfile.AiDemoDotnetReviewGit => CreateAiDemoDotnetReviewGitSteps(aiProviderSelection, logger),
+            WorkflowProfile.AiDemoDotnetOpenCode => CreateAiDemoDotnetExternalCodeSteps(aiProviderSelection, CodeExecutorKind.OpenCode, logger),
+            WorkflowProfile.AiDemoDotnetCodex => CreateAiDemoDotnetExternalCodeSteps(aiProviderSelection, CodeExecutorKind.Codex, logger),
             _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, null)
         };
 
@@ -119,6 +134,42 @@ public sealed class AgentPipelineFactory
         ];
     }
 
+    private IReadOnlyList<AgentPipelineStep> CreateAiDemoDotnetReviewGitSteps(
+        AiProviderSelection aiProviderSelection,
+        IRunLogger logger)
+    {
+        var aiProvider = _aiProviderFactory(aiProviderSelection);
+        return
+        [
+            new(WorkflowStep.Requirements, new AiRequirementsAgent(aiProvider, logger)),
+            new(WorkflowStep.Documentation, new AiDocumentationAgent(aiProvider, logger)),
+            new(WorkflowStep.Planning, new AiPlannerAgent(aiProvider, logger)),
+            new(WorkflowStep.Code, new TemplateCodeAgent(logger)),
+            new(WorkflowStep.Testing, new BuildTestAgent(_toolExecutorFactory(), logger)),
+            new(WorkflowStep.Review, new ArtifactReviewAgent(logger)),
+            new(WorkflowStep.Finalize, new GitWorkspaceSnapshotAgent(_toolExecutorFactory(), logger))
+        ];
+    }
+
+    private IReadOnlyList<AgentPipelineStep> CreateAiDemoDotnetExternalCodeSteps(
+        AiProviderSelection aiProviderSelection,
+        CodeExecutorKind codeExecutorKind,
+        IRunLogger logger)
+    {
+        var aiProvider = _aiProviderFactory(aiProviderSelection);
+        var codeExecutor = _codeExecutorFactory(new CodeExecutorSelection(codeExecutorKind));
+        return
+        [
+            new(WorkflowStep.Requirements, new AiRequirementsAgent(aiProvider, logger)),
+            new(WorkflowStep.Documentation, new AiDocumentationAgent(aiProvider, logger)),
+            new(WorkflowStep.Planning, new AiPlannerAgent(aiProvider, logger)),
+            new(WorkflowStep.Code, new ExternalCodeAgent(codeExecutor, logger)),
+            new(WorkflowStep.Testing, new BuildTestAgent(_toolExecutorFactory(), logger)),
+            new(WorkflowStep.Review, new ArtifactReviewAgent(logger)),
+            new(WorkflowStep.Finalize, new GitWorkspaceSnapshotAgent(_toolExecutorFactory(), logger))
+        ];
+    }
+
     private sealed class MissingToolExecutor : IToolExecutor
     {
         public Task<ToolExecutionResult> ExecuteAsync(
@@ -126,6 +177,18 @@ public sealed class AgentPipelineFactory
             CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("A tool executor must be configured for build/test workflow profiles.");
+        }
+    }
+
+    private sealed class MissingCodeExecutor : ICodeExecutor
+    {
+        public string Name => "missing-code-executor";
+
+        public Task<CodeExecutionResult> ExecuteAsync(
+            CodeExecutionRequest request,
+            CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("A code executor must be configured for external code workflow profiles.");
         }
     }
 }
