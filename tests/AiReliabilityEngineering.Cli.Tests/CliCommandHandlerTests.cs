@@ -1,3 +1,4 @@
+using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Core.Workflow;
 using AiReliabilityEngineering.Orchestration.RunManagement;
 
@@ -16,7 +17,7 @@ public sealed class CliCommandHandlerTests
 
         Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
         Assert.Contains("Usage:", output.ToString());
-        Assert.Contains("aire run <idea-file> [--profile <profile>]", output.ToString());
+        Assert.Contains("aire run <idea-file> [--profile <profile>] [--provider <provider>] [--model <model>]", output.ToString());
     }
 
     [Fact]
@@ -62,6 +63,8 @@ public sealed class CliCommandHandlerTests
                 Assert.Equal(Path.GetFullPath(ideaFilePath), request.IdeaFilePath);
                 Assert.EndsWith("runs", request.RunsDirectory);
                 Assert.Equal(WorkflowProfile.Fake, request.Profile);
+                Assert.Equal(AiProviderKind.Fake, request.EffectiveAiProvider.Kind);
+                Assert.Equal(AiProviderOptions.DefaultFake.Model, request.EffectiveAiProvider.Model);
                 return Task.FromResult(new RunResult(true, "test-run", Path.Combine(tempDirectory, "runs", "test-run"), "Status: Completed"));
             },
             CleanupNotCalled,
@@ -122,6 +125,93 @@ public sealed class CliCommandHandlerTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WithDefaultProviderPassesFakeProvider()
+    {
+        await ExecuteRunProviderTestAsync(
+            ["--profile", "ai-requirements"],
+            AiProviderKind.Fake,
+            AiProviderOptions.DefaultFake.Model);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithExplicitFakeProviderPassesFakeProvider()
+    {
+        await ExecuteRunProviderTestAsync(
+            ["--profile", "ai-requirements", "--provider", "fake"],
+            AiProviderKind.Fake,
+            AiProviderOptions.DefaultFake.Model);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithExplicitFakeModelPassesCustomFakeModel()
+    {
+        await ExecuteRunProviderTestAsync(
+            ["--profile", "ai-requirements", "--provider", "fake", "--model", "custom-fake-model"],
+            AiProviderKind.Fake,
+            "custom-fake-model");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithOpenAiProviderAndModelPassesOpenAiSelection()
+    {
+        await ExecuteRunProviderTestAsync(
+            ["--profile", "ai-requirements", "--provider", "openai", "--model", "test-model"],
+            AiProviderKind.OpenAi,
+            "test-model");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithOpenAiProviderWithoutModelReturnsInvalidArguments()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDirectory);
+        var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
+
+        try
+        {
+            var exitCode = await handler.ExecuteAsync(
+                ["run", ideaFilePath, "--profile", "ai-requirements", "--provider", "openai"],
+                CancellationToken.None);
+
+            Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
+            Assert.Contains("--model is required when --provider openai is used", error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithUnknownProviderReturnsInvalidArguments()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDirectory);
+        var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
+
+        try
+        {
+            var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--provider", "unknown"], CancellationToken.None);
+
+            Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
+            Assert.Contains("Unsupported AI provider: unknown", error.ToString());
+            Assert.Contains("Supported providers: fake, openai", error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithCleanupCommand_InvokesCleanupAndReturnsZero()
     {
         using var output = new StringWriter();
@@ -165,7 +255,7 @@ public sealed class CliCommandHandlerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WithRunHelpOption_ReturnsZeroAndMentionsProfile()
+    public async Task ExecuteAsync_WithRunHelpOption_ReturnsZeroAndMentionsProfileProviderAndModel()
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
@@ -175,8 +265,11 @@ public sealed class CliCommandHandlerTests
 
         Assert.Equal(CliExitCodes.Success, exitCode);
         Assert.Contains("--profile", output.ToString());
+        Assert.Contains("--provider", output.ToString());
+        Assert.Contains("--model", output.ToString());
         Assert.Contains("fake", output.ToString());
         Assert.Contains("ai-requirements", output.ToString());
+        Assert.Contains("openai", output.ToString());
     }
 
     [Fact]
@@ -244,6 +337,46 @@ public sealed class CliCommandHandlerTests
         try
         {
             var exitCode = await handler.ExecuteAsync(["run", ideaFilePath, "--profile", profileValue], CancellationToken.None);
+
+            Assert.Equal(CliExitCodes.Success, exitCode);
+            Assert.True(invoked);
+            Assert.Contains("Status: Completed", output.ToString());
+            Assert.Equal(string.Empty, error.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    private static async Task ExecuteRunProviderTestAsync(
+        string[] runOptions,
+        AiProviderKind expectedKind,
+        string expectedModel)
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDirectory);
+        var ideaFilePath = Path.Combine(tempDirectory, "idea.md");
+        await File.WriteAllTextAsync(ideaFilePath, "# Idea\n");
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var invoked = false;
+        var handler = new CliCommandHandler(
+            (request, cancellationToken) =>
+            {
+                invoked = true;
+                Assert.Equal(expectedKind, request.EffectiveAiProvider.Kind);
+                Assert.Equal(expectedModel, request.EffectiveAiProvider.Model);
+                return Task.FromResult(new RunResult(true, "test-run", Path.Combine(tempDirectory, "runs", "test-run"), "Status: Completed"));
+            },
+            CleanupNotCalled,
+            output,
+            error);
+
+        try
+        {
+            var args = new[] { "run", ideaFilePath }.Concat(runOptions).ToArray();
+            var exitCode = await handler.ExecuteAsync(args, CancellationToken.None);
 
             Assert.Equal(CliExitCodes.Success, exitCode);
             Assert.True(invoked);

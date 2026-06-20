@@ -1,3 +1,4 @@
+using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Core.Workflow;
 using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Infrastructure.Logging;
@@ -143,6 +144,21 @@ public sealed class AireOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_WithAiRequirementsProfilePassesProviderSelectionToPipelineFactory()
+    {
+        AiProviderSelection? receivedSelection = null;
+        using var test = TestWorkspace.Create(selection => receivedSelection = selection);
+        var expectedSelection = new AiProviderSelection(AiProviderKind.OpenAi, "test-model");
+
+        var result = await test.Orchestrator.RunAsync(
+            test.CreateRequest(WorkflowProfile.AiRequirements, expectedSelection),
+            CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.Same(expectedSelection, receivedSelection);
+    }
+
+    [Fact]
     public async Task RunAsync_WithMissingIdeaFile_ReturnsFailureWithoutRunId()
     {
         using var test = TestWorkspace.Create();
@@ -168,7 +184,9 @@ public sealed class AireOrchestratorTests
 
     private sealed class TestWorkspace : IDisposable
     {
-        private TestWorkspace(string rootDirectory)
+        private TestWorkspace(
+            string rootDirectory,
+            Action<AiProviderSelection>? onProviderSelection = null)
         {
             RootDirectory = rootDirectory;
             RunsDirectory = Path.Combine(rootDirectory, "runs");
@@ -177,7 +195,11 @@ public sealed class AireOrchestratorTests
             Orchestrator = new AireOrchestrator(
                 runContext => new CompositeRunLogger([new FileRunLogger(Path.Combine(runContext.Paths.LogsDirectory, "orchestrator.log"))]),
                 runContext => new JsonRunStateStore(runContext.Paths.StateFilePath),
-                new AgentPipelineFactory(_ => new FakeAiProvider()));
+                new AgentPipelineFactory(selection =>
+                {
+                    onProviderSelection?.Invoke(selection);
+                    return new FakeAiProvider();
+                }));
         }
 
         public string RootDirectory { get; }
@@ -188,14 +210,17 @@ public sealed class AireOrchestratorTests
 
         public AireOrchestrator Orchestrator { get; }
 
-        public static TestWorkspace Create()
+        public static TestWorkspace Create(Action<AiProviderSelection>? onProviderSelection = null)
         {
             var rootDirectory = Path.Combine(Path.GetTempPath(), "aire-tests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(rootDirectory);
-            return new TestWorkspace(rootDirectory);
+            return new TestWorkspace(rootDirectory, onProviderSelection);
         }
 
-        public RunRequest CreateRequest(WorkflowProfile profile = WorkflowProfile.Fake) => new(IdeaFilePath, RunsDirectory, profile);
+        public RunRequest CreateRequest(
+            WorkflowProfile profile = WorkflowProfile.Fake,
+            AiProviderSelection? aiProviderSelection = null)
+            => new(IdeaFilePath, RunsDirectory, profile, aiProviderSelection);
 
         public void Dispose()
         {

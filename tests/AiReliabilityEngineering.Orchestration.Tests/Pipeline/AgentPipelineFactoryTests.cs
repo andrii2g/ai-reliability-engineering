@@ -1,3 +1,4 @@
+using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Core.Runs;
 using AiReliabilityEngineering.Core.Steps;
 using AiReliabilityEngineering.Core.Workflow;
@@ -14,7 +15,11 @@ public sealed class AgentPipelineFactoryTests
     [Fact]
     public void Create_FakeProfileCreatesFakeRequirementsAgent()
     {
-        var pipeline = CreateFactory().Create(WorkflowProfile.Fake, new InMemoryRunLogger(), new InMemoryRunStateStore());
+        var pipeline = CreateFactory().Create(
+            WorkflowProfile.Fake,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
 
         Assert.Equal(6, pipeline.Steps.Count);
         Assert.Equal(WorkflowStep.Requirements, pipeline.Steps[0].Step);
@@ -25,7 +30,11 @@ public sealed class AgentPipelineFactoryTests
     [Fact]
     public void Create_AiRequirementsProfileCreatesAiRequirementsAgent()
     {
-        var pipeline = CreateFactory().Create(WorkflowProfile.AiRequirements, new InMemoryRunLogger(), new InMemoryRunStateStore());
+        var pipeline = CreateFactory().Create(
+            WorkflowProfile.AiRequirements,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
 
         Assert.Equal(WorkflowStep.Requirements, pipeline.Steps[0].Step);
         Assert.IsType<AiRequirementsAgent>(pipeline.Steps[0].Agent);
@@ -41,8 +50,16 @@ public sealed class AgentPipelineFactoryTests
     {
         var factory = CreateFactory();
 
-        var fakeSteps = factory.Create(WorkflowProfile.Fake, new InMemoryRunLogger(), new InMemoryRunStateStore()).Steps.Select(step => step.Step);
-        var aiSteps = factory.Create(WorkflowProfile.AiRequirements, new InMemoryRunLogger(), new InMemoryRunStateStore()).Steps.Select(step => step.Step);
+        var fakeSteps = factory.Create(
+            WorkflowProfile.Fake,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore()).Steps.Select(step => step.Step);
+        var aiSteps = factory.Create(
+            WorkflowProfile.AiRequirements,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore()).Steps.Select(step => step.Step);
 
         WorkflowStep[] expected =
         [
@@ -63,7 +80,31 @@ public sealed class AgentPipelineFactoryTests
         var factory = CreateFactory();
 
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            factory.Create((WorkflowProfile)999, new InMemoryRunLogger(), new InMemoryRunStateStore()));
+            factory.Create(
+                (WorkflowProfile)999,
+                AiProviderSelection.DefaultFake,
+                new InMemoryRunLogger(),
+                new InMemoryRunStateStore()));
+    }
+
+    [Fact]
+    public void Create_AiRequirementsProfilePassesProviderSelectionToFactory()
+    {
+        AiProviderSelection? receivedSelection = null;
+        var expectedSelection = new AiProviderSelection(AiProviderKind.OpenAi, "test-model");
+        var factory = new AgentPipelineFactory(selection =>
+        {
+            receivedSelection = selection;
+            return new FakeAiProvider();
+        });
+
+        _ = factory.Create(
+            WorkflowProfile.AiRequirements,
+            expectedSelection,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Same(expectedSelection, receivedSelection);
     }
 
     private static AgentPipelineFactory CreateFactory()
