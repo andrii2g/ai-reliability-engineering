@@ -1,4 +1,4 @@
-# PLAN.md - AIRE Step 10.4: Add OpenAI Provider and Provider Selection
+# PLAN.md - AIRE: Add OpenAI Provider and Provider Selection
 
 ## Purpose
 

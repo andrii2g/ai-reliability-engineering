@@ -3,7 +3,7 @@ namespace AiReliabilityEngineering.Core.Workflow;
 public static class WorkflowProfileParser
 {
     public static IReadOnlyList<string> SupportedCliNames { get; } =
-        ["fake", "ai-requirements"];
+        ["fake", "ai-requirements", "ai-demo"];
 
     public static bool TryParse(
         string? value,
@@ -25,6 +25,10 @@ public static class WorkflowProfileParser
                 profile = WorkflowProfile.AiRequirements;
                 return true;
 
+            case "ai-demo":
+                profile = WorkflowProfile.AiDemo;
+                return true;
+
             default:
                 profile = WorkflowProfile.Fake;
                 return false;
@@ -37,6 +41,7 @@ public static class WorkflowProfileParser
         {
             WorkflowProfile.Fake => "fake",
             WorkflowProfile.AiRequirements => "ai-requirements",
+            WorkflowProfile.AiDemo => "ai-demo",
             _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, null)
         };
     }

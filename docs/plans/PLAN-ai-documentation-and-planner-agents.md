@@ -1,4 +1,4 @@
-# PLAN.md - AIRE Step 10.5: Real Demo with AI Documentation Agent and AI Planner Agent
+# PLAN.md - AIRE: Real Demo with AI Documentation Agent and AI Planner Agent
 
 ## Purpose
 
