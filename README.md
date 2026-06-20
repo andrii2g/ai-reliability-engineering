@@ -48,3 +48,13 @@ dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
 ```
 
 The command creates a new folder under `runs/` containing the copied input file, placeholder artifacts, simulated reports, logs, workspace files, and `run-state.json`.
+
+## AI Provider Layer
+
+AIRE now contains the first provider-neutral AI abstraction.
+
+The current implementation includes only a `FakeAiProvider`. It is deterministic, local-only, and does not require API keys or network access.
+
+AI request contracts validate invalid shapes at construction time.
+
+Real providers such as OpenAI, Ollama, Anthropic, and Gemini will be added later behind the same `IAiProvider` contract.
