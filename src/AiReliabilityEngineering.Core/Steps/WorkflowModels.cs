@@ -9,7 +9,8 @@ public enum WorkflowStep
     Planning = 2,
     Code = 3,
     Testing = 4,
-    Review = 5
+    Review = 5,
+    Finalize = 6
 }
 
 public enum WorkflowStepStatus

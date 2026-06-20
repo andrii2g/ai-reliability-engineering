@@ -41,8 +41,9 @@ public enum RunStatus
     CodeCompleted = 5,
     TestingCompleted = 6,
     ReviewCompleted = 7,
-    Completed = 8,
-    Failed = 9
+    FinalizationCompleted = 8,
+    Completed = 9,
+    Failed = 10
 }
 
 public sealed record RunState(

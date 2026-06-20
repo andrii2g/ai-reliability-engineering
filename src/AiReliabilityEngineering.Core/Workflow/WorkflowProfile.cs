@@ -6,5 +6,8 @@ public enum WorkflowProfile
     AiRequirements,
     AiDemo,
     AiDemoDotnet,
-    AiDemoDotnetReview
+    AiDemoDotnetReview,
+    AiDemoDotnetReviewGit,
+    AiDemoDotnetOpenCode,
+    AiDemoDotnetCodex
 }

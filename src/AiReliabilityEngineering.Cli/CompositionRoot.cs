@@ -1,5 +1,7 @@
 using AiReliabilityEngineering.Core.Ai;
+using AiReliabilityEngineering.Core.CodeExecution;
 using AiReliabilityEngineering.Infrastructure.Ai;
+using AiReliabilityEngineering.Infrastructure.CodeExecution;
 using AiReliabilityEngineering.Infrastructure.Logging;
 using AiReliabilityEngineering.Infrastructure.Serialization;
 using AiReliabilityEngineering.Infrastructure.Tools;
@@ -39,5 +41,17 @@ public static class CompositionRoot
         => new(CreateAiProvider(AiProviderSelection.DefaultFake), logger);
 
     public static AgentPipelineFactory CreateAgentPipelineFactory()
-        => new(CreateAiProvider, () => new ShellToolExecutor());
+        => new(CreateAiProvider, CreateCodeExecutor, () => new ShellToolExecutor());
+
+    public static ICodeExecutor CreateCodeExecutor(CodeExecutorSelection selection)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        return selection.Kind switch
+        {
+            CodeExecutorKind.Fake => new FakeCodeExecutor(),
+            CodeExecutorKind.OpenCode => new OpenCodeExecutor(new ShellToolExecutor()),
+            CodeExecutorKind.Codex => new CodexExecutor(new ShellToolExecutor()),
+            _ => throw new ArgumentOutOfRangeException(nameof(selection), selection.Kind, null)
+        };
+    }
 }
