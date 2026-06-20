@@ -67,6 +67,23 @@ public sealed class RunCleanupServiceTests
         Assert.True(File.Exists(outsideFilePath));
     }
 
+    [Fact]
+    public async Task CleanupAsync_WhenCalledTwice_IsIdempotent()
+    {
+        using var workspace = CleanupWorkspace.Create();
+        Directory.CreateDirectory(Path.Combine(workspace.RunsDirectory, "run-to-delete"));
+        var service = new RunCleanupService();
+
+        var firstResult = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
+        var secondResult = await service.CleanupAsync(workspace.RunsDirectory, CancellationToken.None);
+
+        Assert.True(firstResult.Succeeded);
+        Assert.True(secondResult.Succeeded);
+        Assert.Equal(1, firstResult.DeletedEntries);
+        Assert.Equal(0, secondResult.DeletedEntries);
+        Assert.True(File.Exists(Path.Combine(workspace.RunsDirectory, ".gitkeep")));
+    }
+
     private sealed class CleanupWorkspace : IDisposable
     {
         private CleanupWorkspace(string rootDirectory, bool createRunsDirectory)

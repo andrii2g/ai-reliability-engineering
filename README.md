@@ -35,10 +35,11 @@ dotnet test AiReliabilityEngineering.slnx
 ## Clean Generated Runs
 
 ```bash
-./scripts/aire -cleanup
+./scripts/aire cleanup
 ```
 
 This removes generated folders and files under `runs/`, preserves `runs/`, and recreates `runs/.gitkeep`.
+Do not run cleanup against a `runs/` directory that contains useful manual history.
 
 The Bash script wraps the underlying .NET command:
 

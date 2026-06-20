@@ -84,7 +84,8 @@ The final `run-state.json` should show `Completed` with six successful fake work
 After test runs, clean generated run folders and files:
 
 ```bash
-./scripts/aire -cleanup
+./scripts/aire cleanup
 ```
 
 Cleanup preserves the `runs/` directory and recreates `runs/.gitkeep`.
+Do not run cleanup against a `runs/` directory that contains useful manual history.

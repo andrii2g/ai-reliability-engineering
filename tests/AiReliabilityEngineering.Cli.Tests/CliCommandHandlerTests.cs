@@ -13,7 +13,7 @@ public sealed class CliCommandHandlerTests
 
         var exitCode = await handler.ExecuteAsync([], CancellationToken.None);
 
-        Assert.NotEqual(0, exitCode);
+        Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
         Assert.Contains("Usage:", output.ToString());
     }
 
@@ -26,8 +26,8 @@ public sealed class CliCommandHandlerTests
 
         var exitCode = await handler.ExecuteAsync(["unknown", "idea.md"], CancellationToken.None);
 
-        Assert.NotEqual(0, exitCode);
-        Assert.Contains("Usage:", output.ToString());
+        Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
+        Assert.Contains("Unrecognized command or argument", error.ToString());
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public sealed class CliCommandHandlerTests
 
         var exitCode = await handler.ExecuteAsync(["run", "missing.md"], CancellationToken.None);
 
-        Assert.NotEqual(0, exitCode);
+        Assert.Equal(CliExitCodes.InputFileNotFound, exitCode);
         Assert.Contains("Idea file not found", error.ToString());
     }
 
@@ -69,7 +69,7 @@ public sealed class CliCommandHandlerTests
         {
             var exitCode = await handler.ExecuteAsync(["run", ideaFilePath], CancellationToken.None);
 
-            Assert.Equal(0, exitCode);
+            Assert.Equal(CliExitCodes.Success, exitCode);
             Assert.True(invoked);
             Assert.Contains("Run ID: test-run", output.ToString());
             Assert.Contains("Status: Completed", output.ToString());
@@ -82,7 +82,7 @@ public sealed class CliCommandHandlerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WithCleanupOption_InvokesCleanupAndReturnsZero()
+    public async Task ExecuteAsync_WithCleanupCommand_InvokesCleanupAndReturnsZero()
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
@@ -98,13 +98,66 @@ public sealed class CliCommandHandlerTests
             output,
             error);
 
-        var exitCode = await handler.ExecuteAsync(["-cleanup"], CancellationToken.None);
+        var exitCode = await handler.ExecuteAsync(["cleanup"], CancellationToken.None);
 
-        Assert.Equal(0, exitCode);
+        Assert.Equal(CliExitCodes.Success, exitCode);
         Assert.True(invoked);
         Assert.Contains("Runs cleanup completed", output.ToString());
         Assert.Contains("Deleted entries: 2", output.ToString());
         Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-h")]
+    public async Task ExecuteAsync_WithHelpOption_ReturnsZeroAndMentionsCommands(string helpOption)
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
+
+        var exitCode = await handler.ExecuteAsync([helpOption], CancellationToken.None);
+
+        Assert.Equal(CliExitCodes.Success, exitCode);
+        Assert.Contains("AIRE", output.ToString());
+        Assert.Contains("run", output.ToString());
+        Assert.Contains("cleanup", output.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithRunMissingArgument_ReturnsInvalidArguments()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
+
+        var exitCode = await handler.ExecuteAsync(["run"], CancellationToken.None);
+
+        Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithCleanupUnexpectedArgument_ReturnsInvalidArguments()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
+
+        var exitCode = await handler.ExecuteAsync(["cleanup", "unexpected"], CancellationToken.None);
+
+        Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithDeprecatedCleanupOption_ReturnsInvalidArguments()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var handler = new CliCommandHandler(NotCalled, CleanupNotCalled, output, error);
+
+        var exitCode = await handler.ExecuteAsync(["-cleanup"], CancellationToken.None);
+
+        Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
     }
 
     private static Task<RunResult> NotCalled(RunRequest request, CancellationToken cancellationToken)

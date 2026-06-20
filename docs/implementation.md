@@ -23,7 +23,7 @@ The command creates a new run folder under `runs/`, executes fake agents in orde
 Generated runs can be cleaned with:
 
 ```bash
-./scripts/aire -cleanup
+./scripts/aire cleanup
 ```
 
 Cleanup removes generated folders and files under `runs/`, preserves `runs/`, recreates `runs/.gitkeep`, and does not delete anything outside `runs/`.
@@ -37,7 +37,7 @@ Contains the command-line entry point.
 Current responsibilities:
 
 - define the `run <idea-file>` command using `System.CommandLine`;
-- define the `-cleanup` option for removing generated run outputs;
+- define the `cleanup` command for removing generated run outputs;
 - validate the idea file path;
 - compose the orchestrator with infrastructure implementations;
 - print the final summary;
@@ -126,7 +126,7 @@ Use these commands from the repository root:
 dotnet build AiReliabilityEngineering.slnx
 dotnet test AiReliabilityEngineering.slnx
 ./scripts/aire run samples/idea.md
-./scripts/aire -cleanup
+./scripts/aire cleanup
 ```
 
 Current verified test count:

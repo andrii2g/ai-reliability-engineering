@@ -1,6 +1,5 @@
 using AiReliabilityEngineering.Orchestration.RunManagement;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 
 namespace AiReliabilityEngineering.Cli;
 
@@ -14,6 +13,19 @@ public sealed class CliCommandHandler(
     {
         var command = BuildCommand(cancellationToken);
         var parseResult = command.Parse(args);
+        if (parseResult.Errors.Count > 0)
+        {
+            foreach (var parseError in parseResult.Errors)
+            {
+                await error.WriteLineAsync(parseError.Message);
+            }
+
+            await output.WriteLineAsync("Usage:");
+            await output.WriteLineAsync("  aire run <idea-file>");
+            await output.WriteLineAsync("  aire cleanup");
+            return CliExitCodes.InvalidArguments;
+        }
+
         var configuration = new InvocationConfiguration
         {
             Output = output,
@@ -40,10 +52,20 @@ public sealed class CliCommandHandler(
         {
             ideaFileArgument
         };
-        var cleanupOption = new Option<bool>("-cleanup")
+        var cleanupCommand = new Command("cleanup", "Remove generated run folders and files under runs.");
+
+        cleanupCommand.SetAction(async parseResult =>
         {
-            Description = "Remove generated run folders and files under runs/."
-        };
+            var runsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "runs");
+            var result = await cleanupRunsAsync(runsDirectory, cancellationToken);
+            var writer = result.Succeeded ? output : error;
+
+            await writer.WriteLineAsync(result.Message);
+            await writer.WriteLineAsync($"Runs directory: {result.RunsDirectory}");
+            await writer.WriteLineAsync($"Deleted entries: {result.DeletedEntries}");
+
+            return result.Succeeded ? CliExitCodes.Success : CliExitCodes.ExecutionFailed;
+        });
 
         runCommand.SetAction(async parseResult =>
         {
@@ -51,7 +73,7 @@ public sealed class CliCommandHandler(
             if (ideaFile is null || !ideaFile.Exists)
             {
                 await error.WriteLineAsync($"Idea file not found: {ideaFile?.FullName ?? "(null)"}");
-                return 1;
+                return CliExitCodes.InputFileNotFound;
             }
 
             var runsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "runs");
@@ -63,34 +85,21 @@ public sealed class CliCommandHandler(
             await output.WriteLineAsync($"Run directory: {result.RunDirectory ?? "(none)"}");
             await output.WriteLineAsync(result.Message);
 
-            return result.Succeeded ? 0 : 1;
+            return result.Succeeded ? CliExitCodes.Success : CliExitCodes.ExecutionFailed;
         });
 
         var rootCommand = new RootCommand("AIRE - AI Reliability Engineering")
         {
             runCommand,
-            cleanupOption
+            cleanupCommand
         };
 
         rootCommand.SetAction(async parseResult =>
         {
-            if (!parseResult.GetValue(cleanupOption))
-            {
-                await output.WriteLineAsync("Usage:");
-                await output.WriteLineAsync("  aire run <idea-file>");
-                await output.WriteLineAsync("  aire -cleanup");
-                return 1;
-            }
-
-            var runsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "runs");
-            var result = await cleanupRunsAsync(runsDirectory, cancellationToken);
-            var writer = result.Succeeded ? output : error;
-
-            await writer.WriteLineAsync(result.Message);
-            await writer.WriteLineAsync($"Runs directory: {result.RunsDirectory}");
-            await writer.WriteLineAsync($"Deleted entries: {result.DeletedEntries}");
-
-            return result.Succeeded ? 0 : 1;
+            await output.WriteLineAsync("Usage:");
+            await output.WriteLineAsync("  aire run <idea-file>");
+            await output.WriteLineAsync("  aire cleanup");
+            return CliExitCodes.InvalidArguments;
         });
 
         return rootCommand;

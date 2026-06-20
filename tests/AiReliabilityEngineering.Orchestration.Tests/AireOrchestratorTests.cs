@@ -108,6 +108,30 @@ public sealed class AireOrchestratorTests
         Assert.Contains("Completed", result.Message);
     }
 
+    [Fact]
+    public async Task RunAsync_WithMissingIdeaFile_ReturnsFailureWithoutRunId()
+    {
+        using var test = TestWorkspace.Create();
+
+        var result = await test.Orchestrator.RunAsync(new RunRequest(Path.Combine(test.RootDirectory, "missing.md"), test.RunsDirectory), CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.RunId);
+        Assert.Contains("Idea file not found", result.Message);
+    }
+
+    [Fact]
+    public async Task RunAsync_WithMissingRunsDirectory_ReturnsFailureWithoutRunId()
+    {
+        using var test = TestWorkspace.Create();
+
+        var result = await test.Orchestrator.RunAsync(new RunRequest(test.IdeaFilePath, " "), CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.RunId);
+        Assert.Contains("Runs directory is required", result.Message);
+    }
+
     private sealed class TestWorkspace : IDisposable
     {
         private TestWorkspace(string rootDirectory)

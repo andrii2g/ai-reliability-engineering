@@ -41,8 +41,18 @@ public sealed class AireOrchestrator
             return new RunResult(false, null, null, "Runs directory is required.");
         }
 
-        var runFactory = new RunDirectoryFactory(request.RunsDirectory, _timeProvider);
-        var runContext = await runFactory.CreateAsync(request.IdeaFilePath, cancellationToken);
+        RunContext runContext;
+
+        try
+        {
+            var runFactory = new RunDirectoryFactory(request.RunsDirectory, _timeProvider);
+            runContext = await runFactory.CreateAsync(request.IdeaFilePath, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return new RunResult(false, null, null, $"Status: Failed - {exception.Message}");
+        }
+
         var logger = _loggerFactory(runContext);
         var stateStore = _stateStoreFactory(runContext);
 
