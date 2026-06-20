@@ -53,11 +53,11 @@ The command creates a new folder under `runs/` containing the copied input file,
 
 AIRE now contains the first provider-neutral AI abstraction.
 
-The current implementation includes only a `FakeAiProvider`. It is deterministic, local-only, and does not require API keys or network access.
+The default implementation is `FakeAiProvider`. It is deterministic, local-only, and does not require API keys or network access.
 
 AI request contracts validate invalid shapes at construction time.
 
-Real providers such as OpenAI, Ollama, Anthropic, and Gemini will be added later behind the same `IAiProvider` contract.
+`OpenAiProvider` is available for manual real-provider demos behind the same `IAiProvider` contract.
 
 ## AI Requirements Agent
 
@@ -88,3 +88,14 @@ dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --p
 ```
 
 The `ai-requirements` profile uses `AiRequirementsAgent` with `FakeAiProvider`. It does not require API keys and does not call the network.
+
+## Real Provider Demo
+
+AIRE can run the AI requirements workflow with OpenAI:
+
+```bash
+export OPENAI_API_KEY="..."
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-requirements --provider openai --model <model-name>
+```
+
+The default provider remains fake and does not require API keys. Do not pass API keys through CLI arguments.
