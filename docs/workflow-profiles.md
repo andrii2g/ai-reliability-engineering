@@ -63,3 +63,15 @@ aire run samples/redis-ttl-audit.md --profile ai-demo --provider openai --model 
 ```
 
 The OpenAI run may fail normally if provider output does not match the required documentation markers or planner JSON shape.
+
+## ai-demo-dotnet
+
+This profile runs AI-aware requirements, documentation, and planning agents, then generates a deterministic .NET CLI workspace project and validates it with build/test commands.
+
+Run with the fake provider:
+
+```bash
+aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet --provider fake
+```
+
+The generated source code is template-based and not AI-generated yet.

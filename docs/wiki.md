@@ -118,10 +118,23 @@ Current profiles:
 - `fake`
 - `ai-requirements`
 - `ai-demo`
+- `ai-demo-dotnet`
 
 ## ai-demo Profile
 
 Runs `AiRequirementsAgent`, `AiDocumentationAgent`, and `AiPlannerAgent` before fake code/test/review steps.
+
+## TemplateCodeAgent
+
+Creates a deterministic .NET CLI project in the run workspace.
+
+## BuildTestAgent
+
+Runs build and test commands in the run workspace and writes build/test reports. Each command has a 2-minute timeout.
+
+## ai-demo-dotnet Profile
+
+Runs requirements, documentation, planning, template code generation, build/test validation, and fake review.
 
 ## Documentation Map
 
@@ -140,6 +153,9 @@ Runs `AiRequirementsAgent`, `AiDocumentationAgent`, and `AiPlannerAgent` before 
 | `docs/ai-documentation-agent.md` | AI documentation agent notes |
 | `docs/ai-planner-agent.md` | AI planner agent notes |
 | `docs/demo-ai-artifacts.md` | AI artifacts demo |
+| `docs/template-code-agent.md` | Template code generation notes |
+| `docs/build-test-agent.md` | Build/test validation notes |
+| `docs/demo-dotnet-workspace.md` | Generated .NET workspace demo |
 | `docs/workflow-profiles.md` | Workflow profile usage |
 | `docs/architecture.md` | Deeper architecture notes when needed |
 | `docs/workflow.md` | Detailed workflow notes when needed |

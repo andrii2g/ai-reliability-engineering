@@ -114,6 +114,28 @@ The demo produces:
 
 Source code generation is not implemented yet.
 
+## Generated .NET Workspace Demo
+
+Generate requirements, documentation, planning artifacts, a deterministic .NET CLI project, and build/test reports:
+
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet --provider fake
+```
+
+The generated project is written under the run workspace:
+
+- `workspace/Directory.Packages.props`
+- `workspace/GeneratedTool.slnx`
+- `workspace/src/GeneratedTool.Cli/`
+- `workspace/tests/GeneratedTool.Cli.Tests/`
+
+Build and test reports are written to:
+
+- `reports/build.md`
+- `reports/tests.md`
+
+This demo does not use AI to write source code yet. It uses a deterministic template so the build/test validation path is stable.
+
 ## Real Provider Demo
 
 AIRE can run the AI requirements workflow with OpenAI:

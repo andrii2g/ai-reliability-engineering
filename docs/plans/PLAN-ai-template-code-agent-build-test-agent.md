@@ -1,4 +1,4 @@
-# PLAN.md - AIRE Step 10.6: TemplateCodeAgent and BuildTestAgent
+# PLAN.md - AIRE: TemplateCodeAgent and BuildTestAgent
 
 ## Purpose
 
