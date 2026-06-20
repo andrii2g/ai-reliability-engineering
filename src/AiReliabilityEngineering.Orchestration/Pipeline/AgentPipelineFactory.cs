@@ -40,6 +40,7 @@ public sealed class AgentPipelineFactory
             WorkflowProfile.AiRequirements => CreateAiRequirementsSteps(aiProviderSelection, logger),
             WorkflowProfile.AiDemo => CreateAiDemoSteps(aiProviderSelection, logger),
             WorkflowProfile.AiDemoDotnet => CreateAiDemoDotnetSteps(aiProviderSelection, logger),
+            WorkflowProfile.AiDemoDotnetReview => CreateAiDemoDotnetReviewSteps(aiProviderSelection, logger),
             _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, null)
         };
 
@@ -83,6 +84,22 @@ public sealed class AgentPipelineFactory
             new(WorkflowStep.Code, new FakeCodeAgent(logger)),
             new(WorkflowStep.Testing, new FakeTestAgent(logger)),
             new(WorkflowStep.Review, new FakeReviewerAgent(logger))
+        ];
+    }
+
+    private IReadOnlyList<AgentPipelineStep> CreateAiDemoDotnetReviewSteps(
+        AiProviderSelection aiProviderSelection,
+        IRunLogger logger)
+    {
+        var aiProvider = _aiProviderFactory(aiProviderSelection);
+        return
+        [
+            new(WorkflowStep.Requirements, new AiRequirementsAgent(aiProvider, logger)),
+            new(WorkflowStep.Documentation, new AiDocumentationAgent(aiProvider, logger)),
+            new(WorkflowStep.Planning, new AiPlannerAgent(aiProvider, logger)),
+            new(WorkflowStep.Code, new TemplateCodeAgent(logger)),
+            new(WorkflowStep.Testing, new BuildTestAgent(_toolExecutorFactory(), logger)),
+            new(WorkflowStep.Review, new ArtifactReviewAgent(logger))
         ];
     }
 
