@@ -74,7 +74,7 @@ public sealed class AireOrchestrator
             state = state with { Status = RunStatus.Running, UpdatedAtUtc = _timeProvider.GetUtcNow() };
             await stateStore.SaveAsync(state, cancellationToken);
 
-            var pipeline = _pipelineFactory.Create(request.Profile, logger, stateStore);
+            var pipeline = _pipelineFactory.Create(request.Profile, request.EffectiveAiProvider, logger, stateStore);
             var result = await pipeline.ExecuteAsync(runContext, state, cancellationToken);
             var message = result.Succeeded ? "Status: Completed" : $"Status: Failed - {result.Message}";
             await logger.InfoAsync(result.Succeeded ? "RunCompleted" : "RunFailed", cancellationToken);
@@ -92,6 +92,7 @@ public sealed class AireOrchestrator
                 exception.Message);
             await stateStore.SaveAsync(failedState, cancellationToken);
             return new RunResult(false, runContext.Id.Value, runContext.Paths.RootDirectory, $"Status: Failed - {exception.Message}");
+        }
     }
 
     private sealed class MissingAiProvider : IAiProvider
@@ -105,6 +106,4 @@ public sealed class AireOrchestrator
             throw new InvalidOperationException("An AI provider must be configured for AI workflow profiles.");
         }
     }
-}
-
 }

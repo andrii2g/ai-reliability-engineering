@@ -1,3 +1,4 @@
+using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Core.Workflow;
 using AiReliabilityEngineering.Orchestration.RunManagement;
 using System.CommandLine;
@@ -22,7 +23,7 @@ public sealed class CliCommandHandler(
             }
 
             await output.WriteLineAsync("Usage:");
-            await output.WriteLineAsync("  aire run <idea-file> [--profile <profile>]");
+            await output.WriteLineAsync("  aire run <idea-file> [--profile <profile>] [--provider <provider>] [--model <model>]");
             await output.WriteLineAsync("  aire cleanup");
             return CliExitCodes.InvalidArguments;
         }
@@ -54,10 +55,21 @@ public sealed class CliCommandHandler(
             Description = "Workflow profile to use. Supported values: fake, ai-requirements. Default: fake.",
             DefaultValueFactory = _ => WorkflowProfileParser.ToCliName(WorkflowProfile.Fake)
         };
+        var providerOption = new Option<string>("--provider")
+        {
+            Description = "AI provider to use. Supported values: fake, openai. Default: fake.",
+            DefaultValueFactory = _ => AiProviderSelectionParser.ToCliName(AiProviderKind.Fake)
+        };
+        var modelOption = new Option<string?>("--model")
+        {
+            Description = "AI model name. Required when --provider openai is used."
+        };
         var runCommand = new Command("run", "Run the fake AIRE workflow.")
         {
             ideaFileArgument,
-            profileOption
+            profileOption,
+            providerOption,
+            modelOption
         };
         var cleanupCommand = new Command("cleanup", "Remove generated run folders and files under runs.");
 
@@ -78,10 +90,30 @@ public sealed class CliCommandHandler(
         {
             var ideaFile = parseResult.GetValue(ideaFileArgument);
             var profileValue = parseResult.GetValue(profileOption);
+            var providerValue = parseResult.GetValue(providerOption);
+            var modelValue = parseResult.GetValue(modelOption);
             if (!WorkflowProfileParser.TryParse(profileValue, out var profile))
             {
                 await error.WriteLineAsync($"Unsupported workflow profile: {profileValue}");
                 await error.WriteLineAsync($"Supported profiles: {string.Join(", ", WorkflowProfileParser.SupportedCliNames)}");
+                return CliExitCodes.InvalidArguments;
+            }
+
+            if (!AiProviderSelectionParser.TryParseProviderKind(providerValue, out var providerKind))
+            {
+                await error.WriteLineAsync($"Unsupported AI provider: {providerValue}");
+                await error.WriteLineAsync($"Supported providers: {string.Join(", ", AiProviderSelectionParser.SupportedCliNames)}");
+                return CliExitCodes.InvalidArguments;
+            }
+
+            AiProviderSelection aiProviderSelection;
+            try
+            {
+                aiProviderSelection = CreateAiProviderSelection(providerKind, modelValue);
+            }
+            catch (ArgumentException exception)
+            {
+                await error.WriteLineAsync(exception.Message);
                 return CliExitCodes.InvalidArguments;
             }
 
@@ -92,7 +124,9 @@ public sealed class CliCommandHandler(
             }
 
             var runsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "runs");
-            var result = await runAsync(new RunRequest(ideaFile.FullName, runsDirectory, profile), cancellationToken);
+            var result = await runAsync(
+                new RunRequest(ideaFile.FullName, runsDirectory, profile, aiProviderSelection),
+                cancellationToken);
 
             await output.WriteLineAsync();
             await output.WriteLineAsync("Final summary");
@@ -112,11 +146,28 @@ public sealed class CliCommandHandler(
         rootCommand.SetAction(async parseResult =>
         {
             await output.WriteLineAsync("Usage:");
-            await output.WriteLineAsync("  aire run <idea-file> [--profile <profile>]");
+            await output.WriteLineAsync("  aire run <idea-file> [--profile <profile>] [--provider <provider>] [--model <model>]");
             await output.WriteLineAsync("  aire cleanup");
             return CliExitCodes.InvalidArguments;
         });
 
         return rootCommand;
+    }
+
+    private static AiProviderSelection CreateAiProviderSelection(
+        AiProviderKind providerKind,
+        string? modelValue)
+    {
+        var hasModel = !string.IsNullOrWhiteSpace(modelValue);
+        return providerKind switch
+        {
+            AiProviderKind.Fake => hasModel
+                ? new AiProviderSelection(AiProviderKind.Fake, modelValue!)
+                : AiProviderSelection.DefaultFake,
+            AiProviderKind.OpenAi => hasModel
+                ? new AiProviderSelection(AiProviderKind.OpenAi, modelValue!)
+                : throw new ArgumentException("--model is required when --provider openai is used."),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerKind), providerKind, null)
+        };
     }
 }

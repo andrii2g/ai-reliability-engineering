@@ -28,15 +28,15 @@ public static class CompositionRoot
 
     public static RunCleanupService CreateRunCleanupService() => new();
 
-    public static IAiProvider CreateAiProvider()
+    public static IAiProvider CreateAiProvider(AiProviderSelection? selection = null)
     {
         var factory = new AiProviderFactory();
-        return factory.Create(AiProviderFactoryOptions.Default);
+        return factory.Create(new AiProviderFactoryOptions(selection ?? AiProviderSelection.DefaultFake));
     }
 
     public static AiRequirementsAgent CreateAiRequirementsAgent(IRunLogger logger)
-        => new(CreateAiProvider(), logger);
+        => new(CreateAiProvider(AiProviderSelection.DefaultFake), logger);
 
     public static AgentPipelineFactory CreateAgentPipelineFactory()
-        => new(_ => CreateAiProvider());
+        => new(CreateAiProvider);
 }

@@ -9,11 +9,11 @@ namespace AiReliabilityEngineering.Orchestration.Pipeline;
 
 public sealed class AgentPipelineFactory
 {
-    private readonly Func<IRunLogger, IAiProvider> _aiProviderFactory;
+    private readonly Func<AiProviderSelection, IAiProvider> _aiProviderFactory;
     private readonly TimeProvider _timeProvider;
 
     public AgentPipelineFactory(
-        Func<IRunLogger, IAiProvider> aiProviderFactory,
+        Func<AiProviderSelection, IAiProvider> aiProviderFactory,
         TimeProvider? timeProvider = null)
     {
         _aiProviderFactory = aiProviderFactory ?? throw new ArgumentNullException(nameof(aiProviderFactory));
@@ -22,16 +22,18 @@ public sealed class AgentPipelineFactory
 
     public AgentPipeline Create(
         WorkflowProfile profile,
+        AiProviderSelection aiProviderSelection,
         IRunLogger logger,
         IRunStateStore stateStore)
     {
+        ArgumentNullException.ThrowIfNull(aiProviderSelection);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(stateStore);
 
         var steps = profile switch
         {
             WorkflowProfile.Fake => CreateFakeSteps(logger),
-            WorkflowProfile.AiRequirements => CreateAiRequirementsSteps(logger),
+            WorkflowProfile.AiRequirements => CreateAiRequirementsSteps(aiProviderSelection, logger),
             _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, null)
         };
 
@@ -49,10 +51,12 @@ public sealed class AgentPipelineFactory
             new(WorkflowStep.Review, new FakeReviewerAgent(logger))
         ];
 
-    private IReadOnlyList<AgentPipelineStep> CreateAiRequirementsSteps(IRunLogger logger)
+    private IReadOnlyList<AgentPipelineStep> CreateAiRequirementsSteps(
+        AiProviderSelection aiProviderSelection,
+        IRunLogger logger)
         =>
         [
-            new(WorkflowStep.Requirements, new AiRequirementsAgent(_aiProviderFactory(logger), logger)),
+            new(WorkflowStep.Requirements, new AiRequirementsAgent(_aiProviderFactory(aiProviderSelection), logger)),
             new(WorkflowStep.Documentation, new FakeDocumentationAgent(logger)),
             new(WorkflowStep.Planning, new FakePlannerAgent(logger)),
             new(WorkflowStep.Code, new FakeCodeAgent(logger)),
