@@ -120,6 +120,9 @@ Current profiles:
 - `ai-demo`
 - `ai-demo-dotnet`
 - `ai-demo-dotnet-review`
+- `ai-demo-dotnet-review-git`
+- `ai-demo-dotnet-opencode`
+- `ai-demo-dotnet-codex`
 
 ## ai-demo Profile
 
@@ -168,5 +171,10 @@ Runs the current most complete local demo pipeline, ending with ArtifactReviewAg
 | `docs/artifact-review-agent.md` | Deterministic final review notes |
 | `docs/demo-final-review.md` | Final review demo |
 | `docs/workflow-profiles.md` | Workflow profile usage |
+| `docs/git-workspace-snapshot.md` | Git snapshot finalization |
+| `docs/generated-files-report.md` | Generated files report |
+| `docs/code-executor-abstraction.md` | External code executor abstraction |
+| `docs/opencode-codex-integration.md` | OpenCode/Codex integration notes |
+| `docs/demo-external-code-executors.md` | External code executor demos |
 | `docs/architecture.md` | Deeper architecture notes when needed |
 | `docs/workflow.md` | Detailed workflow notes when needed |

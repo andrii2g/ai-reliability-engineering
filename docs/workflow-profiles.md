@@ -87,3 +87,33 @@ aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review --provider f
 ```
 
 The review is deterministic and does not call AI.
+
+## ai-demo-dotnet-review-git
+
+This profile adds final Git/workspace snapshot reports after deterministic final review.
+
+Run with the fake provider:
+
+```bash
+aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review-git --provider fake
+```
+
+## ai-demo-dotnet-opencode
+
+This opt-in profile creates the deterministic workspace, then runs OpenCode inside that workspace before build/test/review/finalization.
+
+```bash
+aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet-opencode --provider fake
+```
+
+OpenCode must be installed and configured separately.
+
+## ai-demo-dotnet-codex
+
+This opt-in profile creates the deterministic workspace, then runs Codex inside that workspace before build/test/review/finalization.
+
+```bash
+aire run samples/redis-ttl-audit.md --profile ai-demo-dotnet-codex --provider fake
+```
+
+Codex must be installed and configured separately.

@@ -158,6 +158,18 @@ Review:
 - `reports/final-review.md`
 - `reports/workspace-summary.md`
 
+## Git Snapshot and External Code Executors
+
+AIRE can generate Git/workspace reports and includes opt-in profiles for OpenCode and Codex executors.
+
+Local Git snapshot demo:
+
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/redis-ttl-audit.md --profile ai-demo-dotnet-review-git --provider fake
+```
+
+OpenCode and Codex profiles are opt-in and require the corresponding CLI tools to be installed and configured.
+
 ## Real Provider Demo
 
 AIRE can run the AI requirements workflow with OpenAI:
