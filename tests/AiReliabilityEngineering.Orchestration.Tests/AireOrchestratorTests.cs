@@ -1,6 +1,9 @@
+using AiReliabilityEngineering.Core.Workflow;
+using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Infrastructure.Logging;
 using AiReliabilityEngineering.Infrastructure.Serialization;
 using AiReliabilityEngineering.Orchestration;
+using AiReliabilityEngineering.Orchestration.Pipeline;
 using AiReliabilityEngineering.Orchestration.RunManagement;
 using System.Text.Json;
 
@@ -109,6 +112,37 @@ public sealed class AireOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_WithAiRequirementsProfile_CompletesAndWritesRequirementsArtifacts()
+    {
+        using var test = TestWorkspace.Create();
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiRequirements), CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.True(File.Exists(Path.Combine(result.RunDirectory!, "artifacts", "requirements.md")));
+        var specificationPath = Path.Combine(result.RunDirectory!, "artifacts", "specification.json");
+        Assert.True(File.Exists(specificationPath));
+        await using var stream = File.OpenRead(specificationPath);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        Assert.True(document.RootElement.TryGetProperty("projectName", out _));
+    }
+
+    [Fact]
+    public async Task RunAsync_WithAiRequirementsProfile_RecordsAiRequirementsAgent()
+    {
+        using var test = TestWorkspace.Create();
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiRequirements), CancellationToken.None);
+
+        var statePath = Path.Combine(result.RunDirectory!, "run-state.json");
+        await using var stream = File.OpenRead(statePath);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: CancellationToken.None);
+        var firstStep = document.RootElement.GetProperty("steps")[0];
+
+        Assert.Equal("Requirements", firstStep.GetProperty("step").GetString());
+        Assert.Equal("AiRequirementsAgent", firstStep.GetProperty("agentName").GetString());
+        Assert.Equal("Succeeded", firstStep.GetProperty("status").GetString());
+    }
+
+    [Fact]
     public async Task RunAsync_WithMissingIdeaFile_ReturnsFailureWithoutRunId()
     {
         using var test = TestWorkspace.Create();
@@ -142,7 +176,8 @@ public sealed class AireOrchestratorTests
             File.WriteAllText(IdeaFilePath, "# Idea\n\nCreate a test app.\n");
             Orchestrator = new AireOrchestrator(
                 runContext => new CompositeRunLogger([new FileRunLogger(Path.Combine(runContext.Paths.LogsDirectory, "orchestrator.log"))]),
-                runContext => new JsonRunStateStore(runContext.Paths.StateFilePath));
+                runContext => new JsonRunStateStore(runContext.Paths.StateFilePath),
+                new AgentPipelineFactory(_ => new FakeAiProvider()));
         }
 
         public string RootDirectory { get; }
@@ -160,7 +195,7 @@ public sealed class AireOrchestratorTests
             return new TestWorkspace(rootDirectory);
         }
 
-        public RunRequest CreateRequest() => new(IdeaFilePath, RunsDirectory);
+        public RunRequest CreateRequest(WorkflowProfile profile = WorkflowProfile.Fake) => new(IdeaFilePath, RunsDirectory, profile);
 
         public void Dispose()
         {
