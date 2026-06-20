@@ -91,6 +91,15 @@ The normalized requirements contract produced by requirements analysis. Later ag
 
 The first AI-aware AIRE agent. It calls `IAiProvider` but currently writes deterministic artifacts using local normalization.
 
+## Workflow Profile
+
+A named pipeline composition that selects which agents are used for a run.
+
+Current profiles:
+
+- `fake`
+- `ai-requirements`
+
 ## Documentation Map
 
 | File | Purpose |
@@ -103,5 +112,6 @@ The first AI-aware AIRE agent. It calls `IAiProvider` but currently writes deter
 | `docs/implementation.md` | Notes about the current implementation |
 | `docs/ai-providers.md` | AI provider abstraction and fake provider notes |
 | `docs/ai-requirements-agent.md` | AI requirements agent notes |
+| `docs/workflow-profiles.md` | Workflow profile usage |
 | `docs/architecture.md` | Deeper architecture notes when needed |
 | `docs/workflow.md` | Detailed workflow notes when needed |

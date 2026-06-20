@@ -63,4 +63,28 @@ Real providers such as OpenAI, Ollama, Anthropic, and Gemini will be added later
 
 The repository now contains `AiRequirementsAgent`, the first AI-aware agent.
 
-It uses the provider-neutral `IAiProvider` contract and is currently tested with fake/test providers only. The default CLI workflow still uses the stable fake pipeline; workflow profile selection will be added later.
+It uses the provider-neutral `IAiProvider` contract and is currently tested with fake/test providers only. The default CLI workflow still uses the stable fake pipeline, and the agent can be selected with the `ai-requirements` workflow profile.
+
+## Workflow Profiles
+
+AIRE supports workflow profiles.
+
+Default fake workflow:
+
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md
+```
+
+Explicit fake workflow:
+
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --profile fake
+```
+
+AI requirements workflow:
+
+```bash
+dotnet run --project src/AiReliabilityEngineering.Cli -- run samples/idea.md --profile ai-requirements
+```
+
+The `ai-requirements` profile uses `AiRequirementsAgent` with `FakeAiProvider`. It does not require API keys and does not call the network.

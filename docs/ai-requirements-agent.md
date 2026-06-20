@@ -12,3 +12,11 @@ The agent reads the copied input idea file, calls `IAiProvider`, normalizes the 
 - `artifacts/requirements.md`
 
 The default CLI workflow is not changed in this step.
+
+`AiRequirementsAgent` can now be used through the `ai-requirements` workflow profile:
+
+```bash
+aire run samples/idea.md --profile ai-requirements
+```
+
+The profile still uses `FakeAiProvider`.
