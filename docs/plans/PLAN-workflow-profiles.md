@@ -704,12 +704,6 @@ Suggested description:
 Workflow profile to use. Supported values: fake, ai-requirements. Default: fake.
 ```
 
-Also update the custom manual usage text printed by `CliCommandHandler` on parse errors or root invocation:
-
-```text
-aire run <idea-file> [--profile <profile>]
-```
-
 ---
 
 # Tests
@@ -990,9 +984,9 @@ Expected:
 
 - exit code 0;
 - output contains Completed;
-- passed `RunRequest.Profile` is `WorkflowProfile.AiRequirements`.
+- generated run contains `artifacts/requirements.md`.
 
-Keep CLI profile tests delegate-based, matching the existing CLI test style. Real artifact verification for the `ai-requirements` profile belongs in orchestration tests.
+Use temporary directories / isolated current directory as existing CLI tests should already do.
 
 ### Test: unknown profile returns invalid arguments
 

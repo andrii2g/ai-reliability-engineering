@@ -83,6 +83,14 @@ AI request contracts validate invalid shapes at construction time.
 
 Future providers may include OpenAI, Ollama, Anthropic, and Gemini.
 
+## ProjectSpecification
+
+The normalized requirements contract produced by requirements analysis. Later agents can consume it for documentation, planning, code generation, testing, and review.
+
+## AiRequirementsAgent
+
+The first AI-aware AIRE agent. It calls `IAiProvider` but currently writes deterministic artifacts using local normalization.
+
 ## Documentation Map
 
 | File | Purpose |
@@ -94,5 +102,6 @@ Future providers may include OpenAI, Ollama, Anthropic, and Gemini.
 | `docs/QUICKSTART.md` | Quickstart for running the current skeleton |
 | `docs/implementation.md` | Notes about the current implementation |
 | `docs/ai-providers.md` | AI provider abstraction and fake provider notes |
+| `docs/ai-requirements-agent.md` | AI requirements agent notes |
 | `docs/architecture.md` | Deeper architecture notes when needed |
 | `docs/workflow.md` | Detailed workflow notes when needed |

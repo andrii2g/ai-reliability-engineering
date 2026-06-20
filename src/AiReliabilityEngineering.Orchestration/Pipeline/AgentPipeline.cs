@@ -25,6 +25,8 @@ public sealed class AgentPipeline
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    public IReadOnlyList<AgentPipelineStep> Steps => _steps;
+
     public async Task<AgentPipelineResult> ExecuteAsync(
         RunContext runContext,
         RunState initialState,

@@ -1,6 +1,5 @@
 using AiReliabilityEngineering.Core.Runs;
-using AiReliabilityEngineering.Core.Steps;
-using AiReliabilityEngineering.Orchestration.Agents;
+using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Orchestration.Logging;
 using AiReliabilityEngineering.Orchestration.Pipeline;
 using AiReliabilityEngineering.Orchestration.RunManagement;
@@ -12,16 +11,19 @@ public sealed class AireOrchestrator
 {
     private readonly Func<RunContext, IRunLogger> _loggerFactory;
     private readonly Func<RunContext, IRunStateStore> _stateStoreFactory;
+    private readonly AgentPipelineFactory _pipelineFactory;
     private readonly TimeProvider _timeProvider;
 
     public AireOrchestrator(
         Func<RunContext, IRunLogger> loggerFactory,
         Func<RunContext, IRunStateStore> stateStoreFactory,
+        AgentPipelineFactory? pipelineFactory = null,
         TimeProvider? timeProvider = null)
     {
         _loggerFactory = loggerFactory;
         _stateStoreFactory = stateStoreFactory;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _pipelineFactory = pipelineFactory ?? new AgentPipelineFactory(_ => new FakeAiProvider(), _timeProvider);
     }
 
     public async Task<RunResult> RunAsync(RunRequest request, CancellationToken cancellationToken)
@@ -72,7 +74,7 @@ public sealed class AireOrchestrator
             state = state with { Status = RunStatus.Running, UpdatedAtUtc = _timeProvider.GetUtcNow() };
             await stateStore.SaveAsync(state, cancellationToken);
 
-            var pipeline = CreatePipeline(logger, stateStore);
+            var pipeline = _pipelineFactory.Create(request.Profile, logger, stateStore);
             var result = await pipeline.ExecuteAsync(runContext, state, cancellationToken);
             var message = result.Succeeded ? "Status: Completed" : $"Status: Failed - {result.Message}";
             await logger.InfoAsync(result.Succeeded ? "RunCompleted" : "RunFailed", cancellationToken);
@@ -93,18 +95,4 @@ public sealed class AireOrchestrator
         }
     }
 
-    private AgentPipeline CreatePipeline(IRunLogger logger, IRunStateStore stateStore)
-    {
-        var steps = new AgentPipelineStep[]
-        {
-            new(WorkflowStep.Requirements, new FakeRequirementsAgent(logger)),
-            new(WorkflowStep.Documentation, new FakeDocumentationAgent(logger)),
-            new(WorkflowStep.Planning, new FakePlannerAgent(logger)),
-            new(WorkflowStep.Code, new FakeCodeAgent(logger)),
-            new(WorkflowStep.Testing, new FakeTestAgent(logger)),
-            new(WorkflowStep.Review, new FakeReviewerAgent(logger))
-        };
-
-        return new AgentPipeline(steps, stateStore, logger, _timeProvider);
-    }
 }

@@ -58,3 +58,9 @@ The current implementation includes only a `FakeAiProvider`. It is deterministic
 AI request contracts validate invalid shapes at construction time.
 
 Real providers such as OpenAI, Ollama, Anthropic, and Gemini will be added later behind the same `IAiProvider` contract.
+
+## AI Requirements Agent
+
+The repository now contains `AiRequirementsAgent`, the first AI-aware agent.
+
+It uses the provider-neutral `IAiProvider` contract and is currently tested with fake/test providers only. The default CLI workflow still uses the stable fake pipeline; workflow profile selection will be added later.
