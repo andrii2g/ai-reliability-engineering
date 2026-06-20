@@ -90,6 +90,29 @@ public sealed class AgentPipelineFactoryTests
     }
 
     [Fact]
+    public void Create_AiDemoDotnetReviewProfileCreatesAiAgentsThenTemplateBuildAndReviewAgents()
+    {
+        var pipeline = CreateFactory().Create(
+            WorkflowProfile.AiDemoDotnetReview,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(WorkflowStep.Requirements, pipeline.Steps[0].Step);
+        Assert.IsType<AiRequirementsAgent>(pipeline.Steps[0].Agent);
+        Assert.Equal(WorkflowStep.Documentation, pipeline.Steps[1].Step);
+        Assert.IsType<AiDocumentationAgent>(pipeline.Steps[1].Agent);
+        Assert.Equal(WorkflowStep.Planning, pipeline.Steps[2].Step);
+        Assert.IsType<AiPlannerAgent>(pipeline.Steps[2].Agent);
+        Assert.Equal(WorkflowStep.Code, pipeline.Steps[3].Step);
+        Assert.IsType<TemplateCodeAgent>(pipeline.Steps[3].Agent);
+        Assert.Equal(WorkflowStep.Testing, pipeline.Steps[4].Step);
+        Assert.IsType<BuildTestAgent>(pipeline.Steps[4].Agent);
+        Assert.Equal(WorkflowStep.Review, pipeline.Steps[5].Step);
+        Assert.IsType<ArtifactReviewAgent>(pipeline.Steps[5].Agent);
+    }
+
+    [Fact]
     public void Create_BothProfilesKeepSameStepOrder()
     {
         var factory = CreateFactory();
@@ -114,6 +137,11 @@ public sealed class AgentPipelineFactoryTests
             AiProviderSelection.DefaultFake,
             new InMemoryRunLogger(),
             new InMemoryRunStateStore()).Steps.Select(step => step.Step);
+        var aiDemoDotnetReviewSteps = factory.Create(
+            WorkflowProfile.AiDemoDotnetReview,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore()).Steps.Select(step => step.Step);
 
         WorkflowStep[] expected =
         [
@@ -128,6 +156,7 @@ public sealed class AgentPipelineFactoryTests
         Assert.Equal(expected, aiSteps);
         Assert.Equal(expected, aiDemoSteps);
         Assert.Equal(expected, aiDemoDotnetSteps);
+        Assert.Equal(expected, aiDemoDotnetReviewSteps);
     }
 
     [Fact]
@@ -196,6 +225,27 @@ public sealed class AgentPipelineFactoryTests
 
         _ = factory.Create(
             WorkflowProfile.AiDemoDotnet,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(1, callCount);
+    }
+
+    [Fact]
+    public void Create_AiDemoDotnetReviewProfileCreatesSelectedProviderOnce()
+    {
+        var callCount = 0;
+        var factory = new AgentPipelineFactory(
+            _ =>
+            {
+                callCount++;
+                return new FakeAiProvider();
+            },
+            () => new SuccessfulToolExecutor());
+
+        _ = factory.Create(
+            WorkflowProfile.AiDemoDotnetReview,
             AiProviderSelection.DefaultFake,
             new InMemoryRunLogger(),
             new InMemoryRunStateStore());

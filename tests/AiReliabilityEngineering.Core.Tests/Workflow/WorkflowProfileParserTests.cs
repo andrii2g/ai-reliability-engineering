@@ -52,11 +52,21 @@ public sealed class WorkflowProfileParserTests
         Assert.Equal(WorkflowProfile.AiDemoDotnet, profile);
     }
 
+    [Fact]
+    public void TryParse_AiDemoDotnetReviewParses()
+    {
+        var succeeded = WorkflowProfileParser.TryParse("ai-demo-dotnet-review", out var profile);
+
+        Assert.True(succeeded);
+        Assert.Equal(WorkflowProfile.AiDemoDotnetReview, profile);
+    }
+
     [Theory]
     [InlineData("FAKE", WorkflowProfile.Fake)]
     [InlineData("Ai-Requirements", WorkflowProfile.AiRequirements)]
     [InlineData("Ai-Demo", WorkflowProfile.AiDemo)]
     [InlineData("Ai-Demo-Dotnet", WorkflowProfile.AiDemoDotnet)]
+    [InlineData("Ai-Demo-Dotnet-Review", WorkflowProfile.AiDemoDotnetReview)]
     public void TryParse_IsCaseInsensitive(string value, WorkflowProfile expected)
     {
         var succeeded = WorkflowProfileParser.TryParse(value, out var profile);
@@ -79,6 +89,7 @@ public sealed class WorkflowProfileParserTests
     [InlineData(WorkflowProfile.AiRequirements, "ai-requirements")]
     [InlineData(WorkflowProfile.AiDemo, "ai-demo")]
     [InlineData(WorkflowProfile.AiDemoDotnet, "ai-demo-dotnet")]
+    [InlineData(WorkflowProfile.AiDemoDotnetReview, "ai-demo-dotnet-review")]
     public void ToCliName_ReturnsKebabCaseNames(WorkflowProfile profile, string expected)
     {
         Assert.Equal(expected, WorkflowProfileParser.ToCliName(profile));
@@ -89,5 +100,6 @@ public sealed class WorkflowProfileParserTests
     {
         Assert.Contains("ai-demo", WorkflowProfileParser.SupportedCliNames);
         Assert.Contains("ai-demo-dotnet", WorkflowProfileParser.SupportedCliNames);
+        Assert.Contains("ai-demo-dotnet-review", WorkflowProfileParser.SupportedCliNames);
     }
 }

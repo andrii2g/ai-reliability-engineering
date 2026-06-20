@@ -214,6 +214,51 @@ public sealed class AireOrchestratorTests
     }
 
     [Fact]
+    public async Task RunAsync_WithAiDemoDotnetReviewProfile_CompletesAndWritesWorkspaceReportsAndFinalReview()
+    {
+        using var test = TestWorkspace.Create();
+        var result = await test.Orchestrator.RunAsync(test.CreateRequest(WorkflowProfile.AiDemoDotnetReview), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Contains("Completed", result.Message);
+
+        string[] expectedFiles =
+        [
+            "artifacts/specification.json",
+            "artifacts/requirements.md",
+            "artifacts/README.md",
+            "artifacts/PLAN.md",
+            "artifacts/tasks.json",
+            "workspace/Directory.Packages.props",
+            "workspace/GeneratedTool.slnx",
+            "workspace/src/GeneratedTool.Cli/GeneratedTool.Cli.csproj",
+            "workspace/src/GeneratedTool.Cli/Program.cs",
+            "workspace/tests/GeneratedTool.Cli.Tests/GeneratedTool.Cli.Tests.csproj",
+            "workspace/tests/GeneratedTool.Cli.Tests/SmokeTests.cs",
+            "reports/build.md",
+            "reports/tests.md",
+            "reports/final-review.md",
+            "reports/workspace-summary.md"
+        ];
+
+        foreach (var expectedFile in expectedFiles)
+        {
+            Assert.True(File.Exists(Path.Combine(result.RunDirectory!, expectedFile)), expectedFile);
+        }
+
+        await using var stateStream = File.OpenRead(Path.Combine(result.RunDirectory!, "run-state.json"));
+        using var stateDocument = await JsonDocument.ParseAsync(stateStream, cancellationToken: TestContext.Current.CancellationToken);
+        var steps = stateDocument.RootElement.GetProperty("steps");
+        Assert.Equal("Completed", stateDocument.RootElement.GetProperty("status").GetString());
+        Assert.Equal("AiRequirementsAgent", steps[0].GetProperty("agentName").GetString());
+        Assert.Equal("AiDocumentationAgent", steps[1].GetProperty("agentName").GetString());
+        Assert.Equal("AiPlannerAgent", steps[2].GetProperty("agentName").GetString());
+        Assert.Equal("TemplateCodeAgent", steps[3].GetProperty("agentName").GetString());
+        Assert.Equal("BuildTestAgent", steps[4].GetProperty("agentName").GetString());
+        Assert.Equal("ArtifactReviewAgent", steps[5].GetProperty("agentName").GetString());
+    }
+
+    [Fact]
     public async Task RunAsync_WithAiRequirementsProfilePassesProviderSelectionToPipelineFactory()
     {
         AiProviderSelection? receivedSelection = null;

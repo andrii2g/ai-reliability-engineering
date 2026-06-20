@@ -112,6 +112,12 @@ public sealed class CliCommandHandlerTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WithAiDemoDotnetReviewProfile_PassesAiDemoDotnetReviewProfile()
+    {
+        await ExecuteRunProfileTestAsync("ai-demo-dotnet-review", WorkflowProfile.AiDemoDotnetReview);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithUnknownProfile_ReturnsInvalidArguments()
     {
         var tempDirectory = Path.Combine(Path.GetTempPath(), "aire-cli-tests", Guid.NewGuid().ToString("N"));
@@ -309,6 +315,7 @@ public sealed class CliCommandHandlerTests
         Assert.Contains("ai-requirements", output.ToString());
         Assert.Contains("ai-demo", output.ToString());
         Assert.Contains("ai-demo-dotnet", output.ToString());
+        Assert.Contains("ai-demo-dotnet-review", output.ToString());
         Assert.Contains("openai", output.ToString());
     }
 
