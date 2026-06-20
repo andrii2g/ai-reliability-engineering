@@ -1,3 +1,5 @@
+using AiReliabilityEngineering.Core.Ai;
+using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Infrastructure.Logging;
 using AiReliabilityEngineering.Infrastructure.Serialization;
 using AiReliabilityEngineering.Orchestration;
@@ -21,4 +23,10 @@ public static class CompositionRoot
             runContext => new JsonRunStateStore(runContext.Paths.StateFilePath));
 
     public static RunCleanupService CreateRunCleanupService() => new();
+
+    public static IAiProvider CreateAiProvider()
+    {
+        var factory = new AiProviderFactory();
+        return factory.Create(AiProviderFactoryOptions.Default);
+    }
 }

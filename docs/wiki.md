@@ -28,6 +28,7 @@ It is intentionally lightweight and should evolve together with the project.
 | Report | Generated diagnostic/output file such as `tests.md` |
 | Workspace | Folder where generated or modified repository files are placed |
 | Tool Executor | Abstraction for running tools or commands such as shell, Codex, OpenCode, Git, Docker, or dotnet |
+| AI Provider | Adapter that converts AIRE's provider-neutral AI request into a concrete model call |
 
 ## Workflow Terms
 
@@ -72,6 +73,16 @@ runs/{run-id}/
 - Logs, artifacts, reports, and run state are part of the product.
 - Build and tests must not be hidden or ignored.
 
+## AI Provider
+
+Current provider:
+
+- `FakeAiProvider`: deterministic local provider used for tests and early development.
+
+AI request contracts validate invalid shapes at construction time.
+
+Future providers may include OpenAI, Ollama, Anthropic, and Gemini.
+
 ## Documentation Map
 
 | File | Purpose |
@@ -82,5 +93,6 @@ runs/{run-id}/
 | `docs/wiki.md` | Naming, terms, and project statements |
 | `docs/QUICKSTART.md` | Quickstart for running the current skeleton |
 | `docs/implementation.md` | Notes about the current implementation |
+| `docs/ai-providers.md` | AI provider abstraction and fake provider notes |
 | `docs/architecture.md` | Deeper architecture notes when needed |
 | `docs/workflow.md` | Detailed workflow notes when needed |
