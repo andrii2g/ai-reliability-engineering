@@ -3,6 +3,8 @@ using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Infrastructure.Logging;
 using AiReliabilityEngineering.Infrastructure.Serialization;
 using AiReliabilityEngineering.Orchestration;
+using AiReliabilityEngineering.Orchestration.Agents;
+using AiReliabilityEngineering.Orchestration.Logging;
 using AiReliabilityEngineering.Orchestration.RunManagement;
 
 namespace AiReliabilityEngineering.Cli;
@@ -29,4 +31,7 @@ public static class CompositionRoot
         var factory = new AiProviderFactory();
         return factory.Create(AiProviderFactoryOptions.Default);
     }
+
+    public static AiRequirementsAgent CreateAiRequirementsAgent(IRunLogger logger)
+        => new(CreateAiProvider(), logger);
 }
