@@ -62,11 +62,26 @@ public sealed class WorkflowProfileParserTests
     }
 
     [Theory]
+    [InlineData("ai-demo-dotnet-review-git", WorkflowProfile.AiDemoDotnetReviewGit)]
+    [InlineData("ai-demo-dotnet-opencode", WorkflowProfile.AiDemoDotnetOpenCode)]
+    [InlineData("ai-demo-dotnet-codex", WorkflowProfile.AiDemoDotnetCodex)]
+    public void TryParse_NewExternalExecutorProfilesParse(string value, WorkflowProfile expected)
+    {
+        var succeeded = WorkflowProfileParser.TryParse(value, out var profile);
+
+        Assert.True(succeeded);
+        Assert.Equal(expected, profile);
+    }
+
+    [Theory]
     [InlineData("FAKE", WorkflowProfile.Fake)]
     [InlineData("Ai-Requirements", WorkflowProfile.AiRequirements)]
     [InlineData("Ai-Demo", WorkflowProfile.AiDemo)]
     [InlineData("Ai-Demo-Dotnet", WorkflowProfile.AiDemoDotnet)]
     [InlineData("Ai-Demo-Dotnet-Review", WorkflowProfile.AiDemoDotnetReview)]
+    [InlineData("Ai-Demo-Dotnet-Review-Git", WorkflowProfile.AiDemoDotnetReviewGit)]
+    [InlineData("Ai-Demo-Dotnet-OpenCode", WorkflowProfile.AiDemoDotnetOpenCode)]
+    [InlineData("Ai-Demo-Dotnet-Codex", WorkflowProfile.AiDemoDotnetCodex)]
     public void TryParse_IsCaseInsensitive(string value, WorkflowProfile expected)
     {
         var succeeded = WorkflowProfileParser.TryParse(value, out var profile);
@@ -90,6 +105,9 @@ public sealed class WorkflowProfileParserTests
     [InlineData(WorkflowProfile.AiDemo, "ai-demo")]
     [InlineData(WorkflowProfile.AiDemoDotnet, "ai-demo-dotnet")]
     [InlineData(WorkflowProfile.AiDemoDotnetReview, "ai-demo-dotnet-review")]
+    [InlineData(WorkflowProfile.AiDemoDotnetReviewGit, "ai-demo-dotnet-review-git")]
+    [InlineData(WorkflowProfile.AiDemoDotnetOpenCode, "ai-demo-dotnet-opencode")]
+    [InlineData(WorkflowProfile.AiDemoDotnetCodex, "ai-demo-dotnet-codex")]
     public void ToCliName_ReturnsKebabCaseNames(WorkflowProfile profile, string expected)
     {
         Assert.Equal(expected, WorkflowProfileParser.ToCliName(profile));
@@ -101,5 +119,8 @@ public sealed class WorkflowProfileParserTests
         Assert.Contains("ai-demo", WorkflowProfileParser.SupportedCliNames);
         Assert.Contains("ai-demo-dotnet", WorkflowProfileParser.SupportedCliNames);
         Assert.Contains("ai-demo-dotnet-review", WorkflowProfileParser.SupportedCliNames);
+        Assert.Contains("ai-demo-dotnet-review-git", WorkflowProfileParser.SupportedCliNames);
+        Assert.Contains("ai-demo-dotnet-opencode", WorkflowProfileParser.SupportedCliNames);
+        Assert.Contains("ai-demo-dotnet-codex", WorkflowProfileParser.SupportedCliNames);
     }
 }

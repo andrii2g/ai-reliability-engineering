@@ -1,4 +1,5 @@
 using AiReliabilityEngineering.Core.Ai;
+using AiReliabilityEngineering.Core.CodeExecution;
 using AiReliabilityEngineering.Core.Runs;
 using AiReliabilityEngineering.Core.Steps;
 using AiReliabilityEngineering.Core.Tools;
@@ -113,6 +114,51 @@ public sealed class AgentPipelineFactoryTests
     }
 
     [Fact]
+    public void Create_AiDemoDotnetReviewGitProfileAddsFinalizeStep()
+    {
+        var pipeline = CreateFactory().Create(
+            WorkflowProfile.AiDemoDotnetReviewGit,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(7, pipeline.Steps.Count);
+        Assert.Equal(WorkflowStep.Finalize, pipeline.Steps[6].Step);
+        Assert.IsType<GitWorkspaceSnapshotAgent>(pipeline.Steps[6].Agent);
+    }
+
+    [Theory]
+    [InlineData(WorkflowProfile.AiDemoDotnetOpenCode, CodeExecutorKind.OpenCode)]
+    [InlineData(WorkflowProfile.AiDemoDotnetCodex, CodeExecutorKind.Codex)]
+    public void Create_ExternalCodeProfilesUseInjectedCodeExecutor(
+        WorkflowProfile profile,
+        CodeExecutorKind expectedKind)
+    {
+        CodeExecutorSelection? receivedSelection = null;
+        var factory = new AgentPipelineFactory(
+            _ => new FakeAiProvider(),
+            selection =>
+            {
+                receivedSelection = selection;
+                return new RecordingCodeExecutor();
+            },
+            () => new SuccessfulToolExecutor());
+
+        var pipeline = factory.Create(
+            profile,
+            AiProviderSelection.DefaultFake,
+            new InMemoryRunLogger(),
+            new InMemoryRunStateStore());
+
+        Assert.Equal(expectedKind, receivedSelection?.Kind);
+        Assert.Equal(7, pipeline.Steps.Count);
+        Assert.Equal(WorkflowStep.Code, pipeline.Steps[3].Step);
+        Assert.IsType<ExternalCodeAgent>(pipeline.Steps[3].Agent);
+        Assert.Equal(WorkflowStep.Finalize, pipeline.Steps[6].Step);
+        Assert.IsType<GitWorkspaceSnapshotAgent>(pipeline.Steps[6].Agent);
+    }
+
+    [Fact]
     public void Create_BothProfilesKeepSameStepOrder()
     {
         var factory = CreateFactory();
@@ -157,6 +203,33 @@ public sealed class AgentPipelineFactoryTests
         Assert.Equal(expected, aiDemoSteps);
         Assert.Equal(expected, aiDemoDotnetSteps);
         Assert.Equal(expected, aiDemoDotnetReviewSteps);
+    }
+
+    [Fact]
+    public void Create_NewFinalizeProfilesUseSevenStepOrder()
+    {
+        var factory = CreateFactory();
+
+        WorkflowStep[] expected =
+        [
+            WorkflowStep.Requirements,
+            WorkflowStep.Documentation,
+            WorkflowStep.Planning,
+            WorkflowStep.Code,
+            WorkflowStep.Testing,
+            WorkflowStep.Review,
+            WorkflowStep.Finalize
+        ];
+
+        Assert.Equal(
+            expected,
+            factory.Create(WorkflowProfile.AiDemoDotnetReviewGit, AiProviderSelection.DefaultFake, new InMemoryRunLogger(), new InMemoryRunStateStore()).Steps.Select(step => step.Step));
+        Assert.Equal(
+            expected,
+            factory.Create(WorkflowProfile.AiDemoDotnetOpenCode, AiProviderSelection.DefaultFake, new InMemoryRunLogger(), new InMemoryRunStateStore()).Steps.Select(step => step.Step));
+        Assert.Equal(
+            expected,
+            factory.Create(WorkflowProfile.AiDemoDotnetCodex, AiProviderSelection.DefaultFake, new InMemoryRunLogger(), new InMemoryRunStateStore()).Steps.Select(step => step.Step));
     }
 
     [Fact]
@@ -254,7 +327,7 @@ public sealed class AgentPipelineFactoryTests
     }
 
     private static AgentPipelineFactory CreateFactory()
-        => new(_ => new FakeAiProvider(), () => new SuccessfulToolExecutor());
+        => new(_ => new FakeAiProvider(), _ => new RecordingCodeExecutor(), () => new SuccessfulToolExecutor());
 
     private sealed class InMemoryRunLogger : IRunLogger
     {
@@ -275,5 +348,13 @@ public sealed class AgentPipelineFactoryTests
             var now = DateTimeOffset.UtcNow;
             return Task.FromResult(new ToolExecutionResult(0, "ok", string.Empty, now, now));
         }
+    }
+
+    private sealed class RecordingCodeExecutor : ICodeExecutor
+    {
+        public string Name => "recording";
+
+        public Task<CodeExecutionResult> ExecuteAsync(CodeExecutionRequest request, CancellationToken cancellationToken)
+            => Task.FromResult(new CodeExecutionResult(true, 0, "ok", string.Empty, TimeSpan.Zero));
     }
 }

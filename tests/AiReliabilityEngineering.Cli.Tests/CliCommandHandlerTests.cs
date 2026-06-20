@@ -117,6 +117,17 @@ public sealed class CliCommandHandlerTests
         await ExecuteRunProfileTestAsync("ai-demo-dotnet-review", WorkflowProfile.AiDemoDotnetReview);
     }
 
+    [Theory]
+    [InlineData("ai-demo-dotnet-review-git", WorkflowProfile.AiDemoDotnetReviewGit)]
+    [InlineData("ai-demo-dotnet-opencode", WorkflowProfile.AiDemoDotnetOpenCode)]
+    [InlineData("ai-demo-dotnet-codex", WorkflowProfile.AiDemoDotnetCodex)]
+    public async Task ExecuteAsync_WithNewProfiles_PassesSelectedProfile(
+        string profileValue,
+        WorkflowProfile expectedProfile)
+    {
+        await ExecuteRunProfileTestAsync(profileValue, expectedProfile);
+    }
+
     [Fact]
     public async Task ExecuteAsync_WithUnknownProfile_ReturnsInvalidArguments()
     {

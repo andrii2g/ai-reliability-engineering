@@ -34,6 +34,27 @@ public sealed class AgentPipelineTests
         Assert.Equal(WorkflowStepStatus.Failed, result.Steps[^1].Status);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_FinalizeStepUsesFinalizationCompletedBeforeCompleted()
+    {
+        using var workspace = PipelineWorkspace.Create();
+        var stateStore = new InMemoryRunStateStore();
+        var pipeline = new AgentPipeline(
+            [
+                new AgentPipelineStep(WorkflowStep.Review, new SuccessfulAgent("ReviewAgent")),
+                new AgentPipelineStep(WorkflowStep.Finalize, new SuccessfulAgent("FinalizeAgent"))
+            ],
+            stateStore,
+            new InMemoryRunLogger());
+        var initialState = new RunState(workspace.RunContext.Id.Value, RunStatus.TestingCompleted, workspace.RunContext.CreatedAtUtc, workspace.RunContext.CreatedAtUtc, [], null);
+
+        var result = await pipeline.ExecuteAsync(workspace.RunContext, initialState, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(RunStatus.Completed, result.FinalState.Status);
+        Assert.Contains(stateStore.SavedStates, state => state.Status == RunStatus.FinalizationCompleted);
+    }
+
     private sealed class SuccessfulAgent(string name) : IAgent
     {
         public string Name { get; } = name;
