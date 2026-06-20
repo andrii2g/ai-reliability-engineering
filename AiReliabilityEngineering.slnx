@@ -8,6 +8,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/AiReliabilityEngineering.Cli.Tests/AiReliabilityEngineering.Cli.Tests.csproj" />
     <Project Path="tests/AiReliabilityEngineering.Core.Tests/AiReliabilityEngineering.Core.Tests.csproj" />
+    <Project Path="tests/AiReliabilityEngineering.Infrastructure.Tests/AiReliabilityEngineering.Infrastructure.Tests.csproj" />
     <Project Path="tests/AiReliabilityEngineering.Orchestration.Tests/AiReliabilityEngineering.Orchestration.Tests.csproj" />
   </Folder>
 </Solution>
