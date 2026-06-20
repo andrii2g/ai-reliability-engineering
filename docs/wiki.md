@@ -75,13 +75,23 @@ runs/{run-id}/
 
 ## AI Provider
 
-Current provider:
+Current providers:
 
-- `FakeAiProvider`: deterministic local provider used for tests and early development.
+- `FakeAiProvider`: deterministic local provider used by default for tests and early development.
+- `OpenAiProvider`: real provider for manual AI requirements demos.
 
 AI request contracts validate invalid shapes at construction time.
 
-Future providers may include OpenAI, Ollama, Anthropic, and Gemini.
+Provider selection chooses which `IAiProvider` implementation is used by AI-aware agents.
+
+Current provider CLI names:
+
+- `fake`
+- `openai`
+
+OpenAI usage requires `OPENAI_API_KEY` in the environment and an explicit `--model` value. API keys must not be passed through CLI arguments.
+
+Future providers may include Ollama, Anthropic, and Gemini.
 
 ## ProjectSpecification
 
@@ -111,6 +121,8 @@ Current profiles:
 | `docs/QUICKSTART.md` | Quickstart for running the current skeleton |
 | `docs/implementation.md` | Notes about the current implementation |
 | `docs/ai-providers.md` | AI provider abstraction and fake provider notes |
+| `docs/openai-provider.md` | OpenAI provider usage and scope |
+| `docs/demo-openai-requirements.md` | Manual OpenAI requirements demo |
 | `docs/ai-requirements-agent.md` | AI requirements agent notes |
 | `docs/workflow-profiles.md` | Workflow profile usage |
 | `docs/architecture.md` | Deeper architecture notes when needed |
