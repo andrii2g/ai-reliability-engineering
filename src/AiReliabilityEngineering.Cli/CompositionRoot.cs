@@ -5,6 +5,7 @@ using AiReliabilityEngineering.Infrastructure.Serialization;
 using AiReliabilityEngineering.Orchestration;
 using AiReliabilityEngineering.Orchestration.Agents;
 using AiReliabilityEngineering.Orchestration.Logging;
+using AiReliabilityEngineering.Orchestration.Pipeline;
 using AiReliabilityEngineering.Orchestration.RunManagement;
 
 namespace AiReliabilityEngineering.Cli;
@@ -22,7 +23,8 @@ public static class CompositionRoot
                         new FileRunLogger(logFilePath)
                     ]);
             },
-            runContext => new JsonRunStateStore(runContext.Paths.StateFilePath));
+            runContext => new JsonRunStateStore(runContext.Paths.StateFilePath),
+            CreateAgentPipelineFactory());
 
     public static RunCleanupService CreateRunCleanupService() => new();
 
@@ -34,4 +36,7 @@ public static class CompositionRoot
 
     public static AiRequirementsAgent CreateAiRequirementsAgent(IRunLogger logger)
         => new(CreateAiProvider(), logger);
+
+    public static AgentPipelineFactory CreateAgentPipelineFactory()
+        => new(_ => CreateAiProvider());
 }

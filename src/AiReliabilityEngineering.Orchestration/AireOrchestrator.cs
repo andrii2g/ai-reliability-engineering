@@ -1,5 +1,5 @@
+using AiReliabilityEngineering.Core.Ai;
 using AiReliabilityEngineering.Core.Runs;
-using AiReliabilityEngineering.Infrastructure.Ai;
 using AiReliabilityEngineering.Orchestration.Logging;
 using AiReliabilityEngineering.Orchestration.Pipeline;
 using AiReliabilityEngineering.Orchestration.RunManagement;
@@ -23,7 +23,7 @@ public sealed class AireOrchestrator
         _loggerFactory = loggerFactory;
         _stateStoreFactory = stateStoreFactory;
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _pipelineFactory = pipelineFactory ?? new AgentPipelineFactory(_ => new FakeAiProvider(), _timeProvider);
+        _pipelineFactory = pipelineFactory ?? new AgentPipelineFactory(_ => new MissingAiProvider(), _timeProvider);
     }
 
     public async Task<RunResult> RunAsync(RunRequest request, CancellationToken cancellationToken)
@@ -92,7 +92,19 @@ public sealed class AireOrchestrator
                 exception.Message);
             await stateStore.SaveAsync(failedState, cancellationToken);
             return new RunResult(false, runContext.Id.Value, runContext.Paths.RootDirectory, $"Status: Failed - {exception.Message}");
+    }
+
+    private sealed class MissingAiProvider : IAiProvider
+    {
+        public string Name => "missing";
+
+        public Task<AiResponse> GenerateAsync(
+            AiRequest request,
+            CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("An AI provider must be configured for AI workflow profiles.");
         }
     }
+}
 
 }

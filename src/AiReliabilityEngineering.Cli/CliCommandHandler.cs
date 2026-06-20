@@ -1,3 +1,4 @@
+using AiReliabilityEngineering.Core.Workflow;
 using AiReliabilityEngineering.Orchestration.RunManagement;
 using System.CommandLine;
 
@@ -21,7 +22,7 @@ public sealed class CliCommandHandler(
             }
 
             await output.WriteLineAsync("Usage:");
-            await output.WriteLineAsync("  aire run <idea-file>");
+            await output.WriteLineAsync("  aire run <idea-file> [--profile <profile>]");
             await output.WriteLineAsync("  aire cleanup");
             return CliExitCodes.InvalidArguments;
         }
@@ -48,9 +49,15 @@ public sealed class CliCommandHandler(
         {
             Description = "Path to the Markdown idea file."
         };
+        var profileOption = new Option<string>("--profile")
+        {
+            Description = "Workflow profile to use. Supported values: fake, ai-requirements. Default: fake.",
+            DefaultValueFactory = _ => WorkflowProfileParser.ToCliName(WorkflowProfile.Fake)
+        };
         var runCommand = new Command("run", "Run the fake AIRE workflow.")
         {
-            ideaFileArgument
+            ideaFileArgument,
+            profileOption
         };
         var cleanupCommand = new Command("cleanup", "Remove generated run folders and files under runs.");
 
@@ -70,6 +77,14 @@ public sealed class CliCommandHandler(
         runCommand.SetAction(async parseResult =>
         {
             var ideaFile = parseResult.GetValue(ideaFileArgument);
+            var profileValue = parseResult.GetValue(profileOption);
+            if (!WorkflowProfileParser.TryParse(profileValue, out var profile))
+            {
+                await error.WriteLineAsync($"Unsupported workflow profile: {profileValue}");
+                await error.WriteLineAsync($"Supported profiles: {string.Join(", ", WorkflowProfileParser.SupportedCliNames)}");
+                return CliExitCodes.InvalidArguments;
+            }
+
             if (ideaFile is null || !ideaFile.Exists)
             {
                 await error.WriteLineAsync($"Idea file not found: {ideaFile?.FullName ?? "(null)"}");
@@ -77,7 +92,7 @@ public sealed class CliCommandHandler(
             }
 
             var runsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "runs");
-            var result = await runAsync(new RunRequest(ideaFile.FullName, runsDirectory), cancellationToken);
+            var result = await runAsync(new RunRequest(ideaFile.FullName, runsDirectory, profile), cancellationToken);
 
             await output.WriteLineAsync();
             await output.WriteLineAsync("Final summary");
@@ -97,7 +112,7 @@ public sealed class CliCommandHandler(
         rootCommand.SetAction(async parseResult =>
         {
             await output.WriteLineAsync("Usage:");
-            await output.WriteLineAsync("  aire run <idea-file>");
+            await output.WriteLineAsync("  aire run <idea-file> [--profile <profile>]");
             await output.WriteLineAsync("  aire cleanup");
             return CliExitCodes.InvalidArguments;
         });
